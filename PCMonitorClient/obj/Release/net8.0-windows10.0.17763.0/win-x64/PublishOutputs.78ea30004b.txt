@@ -1,0 +1,8 @@
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\PCMonitorClient.pdb
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\vpxmd.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\D3DCompiler_47_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\PenImc_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\PresentationNative_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\vcruntime140_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\wpfgfx_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\publish\PCMonitorClient.exe

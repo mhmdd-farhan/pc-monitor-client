@@ -1,0 +1,8 @@
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\PCMonitorClient.pdb
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\vpxmd.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\D3DCompiler_47_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\PenImc_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\PresentationNative_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\vcruntime140_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\wpfgfx_cor3.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\win-x86\publish\PCMonitorClient.exe

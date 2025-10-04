@@ -1,0 +1,54 @@
+﻿<Application x:Class="PCMonitorClient.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:PCMonitorClient"
+             StartupUri="LoginDialog.xaml">
+    <Application.Resources>
+        <DropShadowEffect x:Key="DropShadowEffect" Color="Black" BlurRadius="10" ShadowDepth="5" Opacity="0.5"/>
+        <Style x:Key="CustomCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Custom box for checkbox -->
+                            <Border x:Name="Box" 
+                        Width="20" Height="20" 
+                        CornerRadius="3" 
+                        BorderBrush="Gray" 
+                        BorderThickness="2" 
+                        Background="White" 
+                        Margin="0,0,8,0">
+                                <Path x:Name="CheckMark" 
+                            Data="M 4 8 L 8 12 L 16 4" 
+                            Stroke="Transparent" 
+                            StrokeThickness="2" 
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"/>
+                            </Border>
+                            <!-- Label text -->
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <!-- When checked, show checkmark -->
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Stroke" Value="Green"/>
+                            </Trigger>
+                            <!-- When unchecked, hide checkmark -->
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="CheckMark" Property="Stroke" Value="Transparent"/>
+                            </Trigger>
+                            <!-- When mouse over, change border color -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="Blue"/>
+                            </Trigger>
+                            <!-- When disabled, change opacity -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Box" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Application.Resources>
+</Application>

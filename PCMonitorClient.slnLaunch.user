@@ -1,0 +1,12 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "PCMonitorClient\\PCMonitorClient.csproj",
+        "Action": "Start",
+        "DebugTarget": "PCMonitorClient"
+      }
+    ]
+  }
+]
