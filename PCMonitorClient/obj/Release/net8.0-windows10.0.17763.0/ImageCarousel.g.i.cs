@@ -164,7 +164,7 @@ namespace PCMonitorClient.Controls {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/PCMonitorClient;V1.0.0.0;component/imagecarousel.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/PCMonitorClient;component/imagecarousel.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\ImageCarousel.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

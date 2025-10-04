@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -39,6 +40,8 @@ namespace PCMonitorClient
         };
 
         private string lastTitle = "";
+
+
         public MainWindow()
         {
             try
@@ -65,7 +68,32 @@ namespace PCMonitorClient
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            timer.Stop();
+            CleanupResources();
+        }
+
+        private void CleanupResources()
+        {
+            try
+            {
+                // Stop and dispose timer
+                if (timer != null)
+                {
+                    timer.Stop();
+                    timer.Tick -= null;
+                    timer = null;
+                }
+
+                // Force garbage collection
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+
+                Debug.WriteLine("MainWindow resources cleaned up");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error during cleanup: {ex.Message}");
+            }
         }
 
         private async void logoutButton_Click(object sender, RoutedEventArgs e)

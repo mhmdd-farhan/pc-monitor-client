@@ -373,11 +373,6 @@ namespace PCMonitorClient
         private async void registerBtn_Click(object sender, RoutedEventArgs e)
         {
             // Input validation
-            if (string.IsNullOrWhiteSpace(textEmail.Text))
-            {
-                MessageBox.Show("Please enter your email.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
 
             if (string.IsNullOrWhiteSpace(textPassword.Text))
             {
@@ -388,12 +383,6 @@ namespace PCMonitorClient
             if (string.IsNullOrWhiteSpace(textIcNumber.Text))
             {
                 MessageBox.Show("Please enter your IC number.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(textPhoneNumber.Text))
-            {
-                MessageBox.Show("Please enter your phone number.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

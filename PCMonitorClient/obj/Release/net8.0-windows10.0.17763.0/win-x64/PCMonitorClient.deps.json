@@ -20,6 +20,7 @@
           "SharpDX.Direct3D11": "4.2.0",
           "Supabase": "1.1.1",
           "System.Drawing.Common": "8.0.0",
+          "dotenv.net": "4.0.0",
           "supabase-csharp": "0.16.2",
           "runtimepack.Microsoft.NETCore.App.Runtime.win-x64": "8.0.20",
           "runtimepack.Microsoft.WindowsDesktop.App.Runtime.win-x64": "8.0.20",
@@ -976,6 +977,14 @@
           "lib/net8.0/DnsClient.dll": {
             "assemblyVersion": "1.8.0.0",
             "fileVersion": "1.8.0.0"
+          }
+        }
+      },
+      "dotenv.net/4.0.0": {
+        "runtime": {
+          "lib/netstandard2.1/dotenv.net.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
           }
         }
       },
@@ -2444,6 +2453,13 @@
       "sha512": "sha512-RRwtaCXkXWsx0mmsReGDqCbRLtItfUbkRJlet1FpdciVhyMGKcPd57T1+8Jki9ojHlq9fntVhXQroOOgRak8DQ==",
       "path": "dnsclient/1.8.0",
       "hashPath": "dnsclient.1.8.0.nupkg.sha512"
+    },
+    "dotenv.net/4.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SM8Qp6L/E3tsLKDFkV23M8WHyp5l1YqsXkylQDjQjV02Z2tUL3J6j1gV0gMs4L6YtoSB7jZPw2dnDdnpEXnpNQ==",
+      "path": "dotenv.net/4.0.0",
+      "hashPath": "dotenv.net.4.0.0.nupkg.sha512"
     },
     "FFmpeg.AutoGen/7.0.0": {
       "type": "package",

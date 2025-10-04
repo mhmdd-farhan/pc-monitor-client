@@ -83,3 +83,6 @@ C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\obj\Release\net8.0-w
 C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\obj\Release\net8.0-windows10.0.17763.0\GeneratedInternalTypeHelper.g.cs
 C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\obj\Release\net8.0-windows10.0.17763.0\RegisterDialog.g.cs
 C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\obj\Release\net8.0-windows10.0.17763.0\RegisterDialog.baml
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\.env
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\bin\Release\net8.0-windows10.0.17763.0\dotenv.net.dll
+C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\obj\Release\net8.0-windows10.0.17763.0\PCMonitorClient_Content.g.cs

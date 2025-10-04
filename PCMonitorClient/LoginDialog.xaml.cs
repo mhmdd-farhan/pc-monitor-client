@@ -71,6 +71,9 @@ namespace PCMonitorClient
         private static Boolean logoutFlag = SharedData.logoutFlag;
 
         private static InputSimulator _inputSimulator;
+
+        private CancellationTokenSource _cancellationTokenSource;
+        private SemaphoreSlim _initializationLock = new SemaphoreSlim(1, 1);
         public LoginDialog()
         {
             if (File.Exists("Settings.dll") == false)
@@ -120,7 +123,7 @@ namespace PCMonitorClient
             {
                 Debug.WriteLine("No .env file found");
             }
-
+            _cancellationTokenSource = new CancellationTokenSource();
             InitializeComponent();
             _keyboardHook = new KeyboardHook();
             if (_mainWindow == null)
@@ -243,7 +246,7 @@ namespace PCMonitorClient
                 }
                 catch (Exception hre)
                 {
-                    MessageBox.Show($"Login Failed: This PC has been booked by another member!");
+                    MessageBox.Show($"Login Failed: Sosmething wrong while login!");
                 }
                 finally
                 {
@@ -439,17 +442,33 @@ namespace PCMonitorClient
         {
             try
             {
+                // Cancel all async operations
+                _cancellationTokenSource?.Cancel();
+
+                // Dispose keyboard hook
                 _keyboardHook?.Dispose();
                 _keyboardHook = null;
+
+                // Clean up connections
+                _ = Task.Run(async () =>
+                {
+                    await CleanupConnection();
+                });
+
+                // Dispose locks
+                _connectionLock?.Dispose();
+                _initializationLock?.Dispose();
+                _cancellationTokenSource?.Dispose();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error disposing keyboard hook: {ex.Message}");
+                Debug.WriteLine($"Error disposing resources: {ex.Message}");
             }
 
             if (Application.Current.MainWindow == this)
             {
                 _mainWindow?.Close();
+                _mainWindow = null;
             }
         }
 
@@ -535,6 +554,7 @@ namespace PCMonitorClient
         }
         private static void Ws_OnMessage(object sender, MessageEventArgs e)
         {
+            Debug.WriteLine($"WebSocket Message Received: {e.Data}");
             var message = Newtonsoft.Json.Linq.JObject.Parse(e.Data);
             Debug.WriteLine($"Received message: {message}");
             string type = message["type"]?.ToString();
@@ -739,7 +759,8 @@ namespace PCMonitorClient
                 // Dispose existing connection if any
                 if (pc != null)
                 {
-                    await CleanupConnection();
+                    await CleanupPeerConnectionOnly();
+                    await Task.Delay(500);
                 }
 
                 var config = new RTCConfiguration
@@ -759,16 +780,19 @@ namespace PCMonitorClient
                     throw new Exception("Failed to initialize peer connection");
                 }
 
-                // Set up data channel handler with better error handling
+                // Set up data channel with proper cleanup
                 pc.ondatachannel += (dc) =>
                 {
-                    if (dc.readyState == RTCDataChannelState.open)
+                    if (dc == null) return;
+
+                    dc.onclose += () =>
                     {
-                        Debug.WriteLine(
-                                "This computer may be taken over control by the manager.",
-                                "Remote Control Active");
-                    }
-                    dc.onclose += () => Debug.WriteLine("Data channel closed");
+                        Debug.WriteLine("Data channel closed");
+                        // Cleanup
+                        dc.onmessage -= null;
+                        dc.onerror -= null;
+                    };
+
                     dc.onerror += (error) => Debug.WriteLine($"Data channel error: {error}");
 
                     dc.onmessage += (dataChannel, protocol, data) =>
@@ -784,63 +808,44 @@ namespace PCMonitorClient
                     };
                 };
 
-                Debug.WriteLine("✅ Setting up the screen capture media stream");
+                // Initialize FFmpeg
+                SIPSorceryMedia.FFmpeg.FFmpegInit.Initialise(
+                    SIPSorceryMedia.FFmpeg.FfmpegLogLevelEnum.AV_LOG_VERBOSE,
+                    ffmpegLibFullPath,
+                    _logger);
 
-                // Initialize FFmpeg with error handling
-                try
-                {
-                    SIPSorceryMedia.FFmpeg.FFmpegInit.Initialise(
-                        SIPSorceryMedia.FFmpeg.FfmpegLogLevelEnum.AV_LOG_VERBOSE,
-                        ffmpegLibFullPath,
-                        _logger);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"FFmpeg initialization error: {ex.Message}");
-                    throw;
-                }
+                // Initialize video
+                _videoSource = new DxgiScreenCaptureSource(new FFmpegVideoEncoder());
+                _videoSource.SetFrameRate(20);
 
-                try
-                {
-                    // Initialize video source
-                    _videoSource = new DxgiScreenCaptureSource(new FFmpegVideoEncoder());
-                    _videoSource.SetFrameRate(TEST_PATTERN_FRAMES_PER_SECOND);
+                MediaStreamTrack track = new MediaStreamTrack(
+                    _videoSource.GetVideoSourceFormats(),
+                    MediaStreamStatusEnum.SendOnly);
+                pc.addTrack(track);
 
-                    MediaStreamTrack track = new MediaStreamTrack(_videoSource.GetVideoSourceFormats(), MediaStreamStatusEnum.SendOnly);
-                    pc.addTrack(track);
-                    Debug.WriteLine("✅ Video track added to peer connection");
+                _videoSource.OnVideoSourceRawSample += MesasureTestPatternSourceFrameRate;
+                _videoSource.OnVideoSourceEncodedSample += pc.SendVideo;
+                pc.OnVideoFormatsNegotiated += (formats) =>
+                    _videoSource.SetVideoSourceFormat(formats.First());
 
-                    _videoSource.OnVideoSourceRawSample += MesasureTestPatternSourceFrameRate;
-                    _videoSource.OnVideoSourceEncodedSample += pc.SendVideo;
-                    pc.OnVideoFormatsNegotiated += (formats) => _videoSource.SetVideoSourceFormat(formats.First());
+                // Initialize audio
+                _audioSource = new AudioSource(new AudioEncoder(includeOpus: false));
+                _audioSource.RestrictFormats(x => x.FormatName == "PCMU");
+                _audioSource.OnAudioSourceEncodedSample += pc.SendAudio;
 
-                    // Initialize audio source
-                    Debug.WriteLine("Setting Audio...");
-                    _audioSource = new AudioSource(new AudioEncoder(includeOpus: false));
-                    _audioSource.RestrictFormats(x => x.FormatName == "PCMU");
-                    _audioSource.OnAudioSourceEncodedSample += pc.SendAudio;
+                MediaStreamTrack audioTrack = new MediaStreamTrack(
+                    _audioSource.GetAudioSourceFormats(),
+                    MediaStreamStatusEnum.SendOnly);
+                pc.addTrack(audioTrack);
+                pc.OnAudioFormatsNegotiated += (audioFormats) =>
+                    _audioSource.SetAudioSourceFormat(audioFormats.First());
 
-                    MediaStreamTrack audioTrack = new MediaStreamTrack(_audioSource.GetAudioSourceFormats(), MediaStreamStatusEnum.SendOnly);
-                    pc.addTrack(audioTrack);
-                    pc.OnAudioFormatsNegotiated += (audioFormats) => _audioSource.SetAudioSourceFormat(audioFormats.First());
-                    Debug.WriteLine("✅ Audio track added to peer connection");
-                } catch (Exception ex)
-                {
-                    Debug.WriteLine($"Media source initialization error: {ex.Message}");
-                    MessageBox.Show("❌ Error initializing media sources");
-                    throw;
-                }
-
-                // Set up event handlers with better error handling
+                // Event handlers
                 pc.onicecandidate += OnIceCandidate;
                 pc.onconnectionstatechange += OnConnectionStateChange;
                 pc.oniceconnectionstatechange += (state) =>
                 {
                     Debug.WriteLine($"🧊 ICE connection state changed to: {state}");
-                    if (state == RTCIceConnectionState.failed || state == RTCIceConnectionState.disconnected)
-                    {
-                        Debug.WriteLine("ICE connection failed/disconnected");
-                    }
                 };
 
                 Debug.WriteLine("✅ Peer connection initialized successfully");
@@ -848,8 +853,6 @@ namespace PCMonitorClient
             catch (Exception ex)
             {
                 Debug.WriteLine($"❌ Error initializing peer connection: {ex.Message}");
-                MessageBox.Show("❌ Error initializing peer connection");
-                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 await CleanupConnection();
                 throw;
             }
@@ -1301,7 +1304,12 @@ namespace PCMonitorClient
             if (_isCleaningUp)
             {
                 Debug.WriteLine("Cleanup already in progress, waiting...");
-                await Task.Delay(100);
+                int waitCount = 0;
+                while (_isCleaningUp && waitCount < 50)
+                {
+                    await Task.Delay(100);
+                    waitCount++;
+                }
                 return;
             }
 
@@ -1310,13 +1318,19 @@ namespace PCMonitorClient
 
             try
             {
-                // 1. Stop video source first (most critical)
+                // 1. Stop and dispose video source
                 if (_videoSource != null)
                 {
                     try
                     {
-                        await _videoSource.PauseVideo(); // Pause first to stop capture timer
-                        await Task.Delay(100); // Let timer callbacks finish
+                        _videoSource.OnVideoSourceRawSample -= MesasureTestPatternSourceFrameRate;
+                        if (pc != null)
+                        {
+                            _videoSource.OnVideoSourceEncodedSample -= pc.SendVideo;
+                        }
+
+                        await _videoSource.PauseVideo();
+                        await Task.Delay(200);
                         await _videoSource.CloseVideo();
                         _videoSource.Dispose();
                         Debug.WriteLine("Video source cleaned up");
@@ -1331,11 +1345,19 @@ namespace PCMonitorClient
                     }
                 }
 
-                // 2. Stop audio source
+                // 2. Stop and dispose audio source
                 if (_audioSource != null)
                 {
                     try
                     {
+                        // Unsubscribe events
+                        if (pc != null)
+                        {
+                            _audioSource.OnAudioSourceEncodedSample -= pc.SendAudio;
+                        }
+
+                        await _audioSource.PauseAudio();
+                        await Task.Delay(100);
                         await _audioSource.CloseAudio();
                         Debug.WriteLine("Audio source cleaned up");
                     }
@@ -1354,12 +1376,16 @@ namespace PCMonitorClient
                 {
                     try
                     {
+                        // Unsubscribe ALL events
                         pc.onicecandidate -= OnIceCandidate;
-                        pc.onconnectionstatechange -= OnConnectionStateChange; 
+                        pc.onconnectionstatechange -= OnConnectionStateChange;
                         pc.oniceconnectionstatechange -= OnIceConnectionStateChange;
+                        pc.OnVideoFormatsNegotiated -= null;
+                        pc.OnAudioFormatsNegotiated -= null;
+                        pc.ondatachannel -= null;
 
                         pc.Close("cleanup");
-                        await Task.Delay(100);
+                        await Task.Delay(200);
                         pc.Dispose();
                         Debug.WriteLine("Peer connection cleaned up");
                     }
@@ -1373,33 +1399,27 @@ namespace PCMonitorClient
                     }
                 }
 
+                // 4. Close WebSocket
                 if (ws != null)
                 {
                     try
                     {
+                        // Unsubscribe events
+                        ws.OnOpen -= Ws_OnOpen;
+                        ws.OnMessage -= Ws_OnMessage;
+
                         if (ws.ReadyState == WebSocketState.Open)
                         {
-                            // Send quit message
                             var quitMsg = new
                             {
                                 type = "quit",
-                                body = new
-                                {
-                                    channelName,
-                                    userId
-                                }
+                                body = new { channelName, userId }
                             };
-
                             ws.Send(Newtonsoft.Json.JsonConvert.SerializeObject(quitMsg));
-                            Debug.WriteLine("Quit message sent");
-
-                            // Wait a bit for message to be sent
                             await Task.Delay(200);
-
-                            // Close the WebSocket
                             ws.Close(CloseStatusCode.Normal, "Client cleanup");
-                            Debug.WriteLine("WebSocket closed");
                         }
+                        Debug.WriteLine("WebSocket closed");
                     }
                     catch (Exception ex)
                     {
@@ -1411,8 +1431,13 @@ namespace PCMonitorClient
                     }
                 }
 
-                // 5. Clear ICE buffer
+                // 5. Clear buffers
                 iceBuffer.Clear();
+
+                // 6. Force GC collection untuk free memory
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
 
                 Debug.WriteLine("Cleanup completed successfully");
             }
