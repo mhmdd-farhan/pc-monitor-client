@@ -464,33 +464,75 @@ namespace PCMonitorClient
 
         private void loginLink_Click(object sender, RoutedEventArgs e)
         {
-            var existingLogin = Application.Current.Windows.OfType<LoginDialog>().FirstOrDefault();
-
-            if (existingLogin != null)
+            if (_isNavigating)
             {
-                var hookField = typeof(LoginDialog).GetField("_keyboardHook",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                if (hookField != null)
-                {
-                    var hook = hookField.GetValue(existingLogin) as KeyboardHook;
-                    if (hook == null)
-                    {
-                        hook = new KeyboardHook();
-                        hookField.SetValue(existingLogin, hook);
-                        hook.SetHook();
-                    }
-                }
-
-                existingLogin.Show();
-                existingLogin.Activate();
-                this.Close();
+                Debug.WriteLine("Navigation already in progress");
+                return;
             }
-            else
+
+            _isNavigating = true;
+
+            try
             {
-                LoginDialog loginDialog = new LoginDialog();
-                loginDialog.Show();
-                this.Close();
+                var existingLogin = Application.Current.Windows.OfType<LoginDialog>().FirstOrDefault();
+
+                if (existingLogin != null)
+                {
+                    var hookField = typeof(LoginDialog).GetField("_keyboardHook",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                    if (hookField != null)
+                    {
+                        try
+                        {
+                            var hook = hookField.GetValue(existingLogin) as KeyboardHook;
+
+                            if (hook != null)
+                            {
+                                hook.Dispose();
+                                hook = null;
+                            }
+
+                            hook = new KeyboardHook();
+                            hookField.SetValue(existingLogin, hook);
+                            hook.SetHook();
+
+                            Debug.WriteLine("Keyboard hook reinitialized successfully");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error managing keyboard hook: {ex.Message}");
+                        }
+                    }
+
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        existingLogin.Show();
+                        existingLogin.Activate();
+                        existingLogin.Focus();
+                        this.Close();
+                    }), System.Windows.Threading.DispatcherPriority.Background);
+                }
+                else
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        LoginDialog loginDialog = new LoginDialog();
+                        loginDialog.Show();
+                        loginDialog.Activate();
+                        loginDialog.Focus();
+                        this.Close();
+                    }), System.Windows.Threading.DispatcherPriority.Background);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in loginLink_Click: {ex.Message}");
+                MessageBox.Show($"Navigation error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isNavigating = false;
             }
         }
 
@@ -516,12 +558,29 @@ namespace PCMonitorClient
 
         private void Window_Closed(object sender, EventArgs e)
         {
-
+            textEmail.Clear();
+            textPassword.Clear();
+            textIcNumber.Clear();
+            textPhoneNumber.Clear();
+            textSiteName.Clear();
+            textFullName.Clear();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-
+            try
+            {
+                // Cleanup any ongoing operations
+                if (_isNavigating)
+                {
+                    Debug.WriteLine("Cancelling navigation...");
+                    _isNavigating = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in Window_Closing: {ex.Message}");
+            }
         }
     
     }

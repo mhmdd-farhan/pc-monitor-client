@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PCMonitorClient")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute(" ")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7f0793a529ba47bbae4a1e1d1bc9556f231065ee")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f84a676bf65e3a23fbe56fbc2d4be5673e301c5f")]
 [assembly: System.Reflection.AssemblyProductAttribute("PCMonitorClient")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PCMonitorClient")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

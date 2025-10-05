@@ -16,7 +16,6 @@
         Closing="Window_Closing" 
         Closed="Window_Closed" 
         Loaded="Window_Loaded">
-
     <Grid>
         <Grid.ColumnDefinitions>
             <!-- Kiri 75% -->

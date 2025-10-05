@@ -51,7 +51,6 @@ namespace PCMonitorClient
         private static bool _isReconnecting = false;
         private static SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
 
-        private static string signalingServerUrl;
         private string SUPABASE_URL;
         private static string ffmpegLibFullPath;
         private const int TEST_PATTERN_FRAMES_PER_SECOND = 30;
@@ -113,8 +112,7 @@ namespace PCMonitorClient
                 DotEnv.Load();
                 var envVars = DotEnv.Read();
                 SUPABASE_URL = envVars["SUPABASE_URL"] ?? "";
-                signalingServerUrl = envVars["WSS_URL"] ?? "";
-                if (SUPABASE_URL == "" || signalingServerUrl == "")
+                if (SUPABASE_URL == "")
                 {
                     MessageBox.Show("supabase url or wss url not found");
                 }
@@ -125,7 +123,15 @@ namespace PCMonitorClient
             }
             _cancellationTokenSource = new CancellationTokenSource();
             InitializeComponent();
-            _keyboardHook = new KeyboardHook();
+            try
+            {
+                _keyboardHook = new KeyboardHook();
+                _keyboardHook.SetHook();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to initialize keyboard hook: {ex.Message}");
+            }
             if (_mainWindow == null)
             {
                 _mainWindow = new MainWindow();
@@ -158,6 +164,40 @@ namespace PCMonitorClient
         public void loginBtn_Click(object sender, RoutedEventArgs e)
         {
             LoginAsync();
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+
+            try
+            {
+                if (_keyboardHook == null)
+                {
+                    _keyboardHook = new KeyboardHook();
+                }
+
+                _keyboardHook.SetHook();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting keyboard hook on activation: {ex.Message}");
+            }
+        }
+
+        protected override void OnDeactivated(EventArgs e)
+        {
+            base.OnDeactivated(e);
+
+            try
+            {
+                _keyboardHook?.Dispose();
+                _keyboardHook = null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error disposing keyboard hook on deactivation: {ex.Message}");
+            }
         }
         public async Task LoginAsync()
         {
@@ -263,7 +303,15 @@ namespace PCMonitorClient
             {
                 if (SharedData.startFlag == 1)
                 {
-                    _keyboardHook.Dispose();
+                    try
+                    {
+                        _keyboardHook?.Dispose();
+                        _keyboardHook = null;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error disposing keyboard hook: {ex.Message}");
+                    }
                     _mainWindow.ResetMonitoringData();
                     _mainWindow.Show();
                     _mainWindow.timer?.Start();
@@ -278,10 +326,22 @@ namespace PCMonitorClient
                     _ = Task.Run(async () => await LogOutAsync());
                     _mainWindow.timer?.Stop();
                     _mainWindow.Hide();
+                    _mainWindow.CloseAllOtherApplications();
                     this.Show();
                     SharedData.logoutFlag = false;
                     SharedData.startFlag = 3;
-                    _keyboardHook.SetHook();
+                    try
+                    {
+                        if (_keyboardHook == null)
+                        {
+                            _keyboardHook = new KeyboardHook();
+                        }
+                        _keyboardHook.SetHook();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error reinitializing keyboard hook: {ex.Message}");
+                    }
                 }
             };
             timer.Start();
@@ -445,9 +505,16 @@ namespace PCMonitorClient
                 // Cancel all async operations
                 _cancellationTokenSource?.Cancel();
 
-                // Dispose keyboard hook
-                _keyboardHook?.Dispose();
-                _keyboardHook = null;
+                // Dispose keyboard hook dengan aman
+                try
+                {
+                    _keyboardHook?.Dispose();
+                    _keyboardHook = null;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error disposing keyboard hook in Window_Closed: {ex.Message}");
+                }
 
                 // Clean up connections
                 _ = Task.Run(async () =>
@@ -489,8 +556,8 @@ namespace PCMonitorClient
                 await CleanupConnection();
 
                 await Task.Delay(500);
-
-                ws = new WebSocket(signalingServerUrl);
+                var wsClient = new ChannelAwareWebsocket();
+                ws = await wsClient.ConnectToChannelAsync(channelName, userId);
                 ws.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
                 ws.SslConfiguration.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
 

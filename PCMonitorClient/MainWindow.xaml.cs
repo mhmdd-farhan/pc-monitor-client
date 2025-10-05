@@ -96,7 +96,13 @@ namespace PCMonitorClient
             }
         }
 
-        private async void logoutButton_Click(object sender, RoutedEventArgs e)
+        private void logoutButton_Click(object sender, RoutedEventArgs e)
+        {
+            LogoutAsync();
+            CloseAllOtherApplications();
+        }
+
+        private async void LogoutAsync()
         {
             // Edge function URL to send the remain time, CPU Usage, etc.
             string pc_logout_url = $"{SUPABASE_URL}/functions/v1/pc-end-session";
@@ -128,6 +134,8 @@ namespace PCMonitorClient
 
                     SharedData.logoutFlag = true;
 
+                    CloseAllOtherApplications();
+
                     Debug.WriteLine("Logout API called successfully");
                 }
                 catch (Exception hre)
@@ -135,6 +143,69 @@ namespace PCMonitorClient
                     MessageBox.Show($"Log out failed: {hre.Message} \n {hre.StackTrace}");
                 }
             }
+        }
+
+        public void CloseAllOtherApplications()
+        {
+            try
+            {
+                int currentProcessId = Process.GetCurrentProcess().Id;
+                string currentProcessName = Process.GetCurrentProcess().ProcessName;
+
+                Process[] processes = Process.GetProcesses();
+
+                foreach (Process process in processes)
+                {
+                    try
+                    {
+                        if (process.Id == currentProcessId)
+                            continue;
+
+                        if (IsSystemProcess(process.ProcessName))
+                            continue;
+
+                        if (process.MainWindowHandle == IntPtr.Zero)
+                            continue;
+
+                        if (!process.CloseMainWindow())
+                        {
+                            if (!process.WaitForExit(2000))
+                            {
+                                process.Kill();
+                            }
+                        }
+
+                        Debug.WriteLine($"Closed: {process.ProcessName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Failed to close {process.ProcessName}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error closing applications: {ex.Message}");
+            }
+        }
+
+        private bool IsSystemProcess(string processName)
+        {
+            string[] systemProcesses = new string[]
+            {
+                "System", "Registry", "smss", "csrss", "wininit", "services",
+                "lsass", "svchost", "winlogon", "explorer", "dwm", "taskmgr",
+                "SearchHost", "StartMenuExperienceHost", "RuntimeBroker",
+                "ShellExperienceHost", "TextInputHost", "SecurityHealthSystray",
+                "SecurityHealthService", "MsMpEng", "NisSrv", "conhost",
+                "fontdrvhost", "sihost", "ctfmon", "SearchApp", "ApplicationFrameHost"
+            };
+
+            return systemProcesses.Contains(processName, StringComparer.OrdinalIgnoreCase);
         }
 
         private void StartTrackingApps()
@@ -291,6 +362,8 @@ namespace PCMonitorClient
                     SharedData.createdBy = "";
                     SharedData.duration = 0;
                     SharedData.logoutFlag = true;
+                    LogoutAsync();
+                    CloseAllOtherApplications();
                 }
 
                 if (idleTime.Minutes == 20)
@@ -301,6 +374,8 @@ namespace PCMonitorClient
                 else if (idleTime.Minutes > 30)
                 {
                     SharedData.logoutFlag = true;
+                    LogoutAsync();
+                    CloseAllOtherApplications();
                 }
 
                 if (time % 30 == 0)
