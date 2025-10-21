@@ -1,10 +1,10 @@
 ﻿using dotenv.net;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -15,7 +15,6 @@ namespace PCMonitorClient
 {
     internal class ChannelAwareWebsocket
     {
-
         private static string[] instanceEndpoints;
         private static string httpUrl;
         private static readonly HttpClient httpClient = new HttpClient();
@@ -52,14 +51,37 @@ namespace PCMonitorClient
             return Math.Abs(hash);
         }
 
-        private async Task<string> PrepareSession(string channelName, string userId)
+        // Clear old cookies to ensure fresh session
+        private void ClearSessionCookies()
         {
             try
             {
+                // Create new cookie container to clear old cookies
+                cookieContainer = new CookieContainer();
+                Debug.WriteLine("[CLIENT] Session cookies cleared");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CLIENT] Error clearing cookies: {ex.Message}");
+            }
+        }
+
+        private async Task<SessionResult> PrepareSession(string channelName, string userId, bool forceNew = true)
+        {
+            try
+            {
+                // Clear old cookies FIRST to ensure fresh session
+                if (forceNew)
+                {
+                    ClearSessionCookies();
+                    Debug.WriteLine("[CLIENT] Forcing new session creation");
+                }
+
                 var requestData = new
                 {
                     channelName = channelName,
-                    userId = userId
+                    userId = userId,
+                    forceNew = forceNew  // Tell server to create new session
                 };
 
                 var json = JsonSerializer.Serialize(requestData);
@@ -77,31 +99,47 @@ namespace PCMonitorClient
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        Debug.WriteLine($"Failed to prepare session: {response.StatusCode}");
+                        Debug.WriteLine($"[CLIENT] Failed to prepare session: {response.StatusCode}");
                         return null;
                     }
 
                     var responseBody = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"Session prepared: {responseBody}");
+                    Debug.WriteLine($"[CLIENT] Session prepared: {responseBody}");
 
+                    // Parse response
+                    var responseObject = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                    string channelNameFromResponse = responseObject.GetProperty("channelName").GetString();
+
+                    // Get cookies
                     var cookies = cookieContainer.GetCookies(new Uri(httpUrl));
                     string channelSessionCookie = null;
 
                     foreach (Cookie cookie in cookies)
                     {
-                        Debug.WriteLine($"Cookie received: {cookie.Name}={cookie.Value}");
+                        Debug.WriteLine($"[CLIENT] Cookie received: {cookie.Name}={cookie.Value}");
                         if (cookie.Name == "channel-session")
                         {
                             channelSessionCookie = cookie.Value;
                         }
                     }
 
-                    return channelSessionCookie;
+                    Debug.WriteLine($"[CLIENT] Extracted channel-session cookie: {channelSessionCookie}");
+
+                    if (string.IsNullOrEmpty(channelSessionCookie) && forceNew)
+                    {
+                        Debug.WriteLine("[CLIENT] Warning: No session cookie received, may cause connection issues");
+                    }
+
+                    return new SessionResult
+                    {
+                        ChannelSessionCookie = channelSessionCookie,
+                        ChannelName = channelNameFromResponse
+                    };
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error preparing session: {ex.Message}");
+                Debug.WriteLine($"[CLIENT] Error preparing session: {ex.Message}");
                 return null;
             }
         }
@@ -112,36 +150,104 @@ namespace PCMonitorClient
             return instanceEndpoints[0];
         }
 
-        public async Task<WebSocketSharp.WebSocket> ConnectToChannelAsync(string channelName, string userId)
+        public async Task<WebSocketSharp.WebSocket> ConnectToChannelAsync(
+            string channelName,
+            string userId,
+            bool forceNewSession = true)
         {
-            Debug.WriteLine($"Preparing session for channel: {channelName}");
+            var sessionResult = await PrepareSession(channelName, userId, forceNewSession);
 
-            var sessionCookie = await PrepareSession(channelName, userId);
-            if (string.IsNullOrEmpty(sessionCookie))
+            if (sessionResult == null ||
+                string.IsNullOrEmpty(sessionResult.ChannelSessionCookie) ||
+                string.IsNullOrEmpty(sessionResult.ChannelName))
             {
                 throw new Exception("Failed to prepare session or get cookie");
             }
 
-            await Task.Delay(200);
+            Debug.WriteLine($"[CLIENT] Channel from API: {sessionResult.ChannelName}");
+
+            // Wait for session to be fully initialized
+            await Task.Delay(500);
 
             var wsUrl = GetInstanceForChannel(channelName);
-            Debug.WriteLine($"Connecting to WebSocket: {wsUrl}");
-            var ws = new WebSocketSharp.WebSocket(wsUrl);
+            var wsFullUrl = $"{wsUrl}?session={Uri.EscapeDataString(sessionResult.ChannelSessionCookie)}&channel={Uri.EscapeDataString(sessionResult.ChannelName)}";
 
-            ws.SetCookie(new WebSocketSharp.Net.Cookie("channel-session", sessionCookie)
+            Debug.WriteLine($"[CLIENT] Connecting to WebSocket: {wsFullUrl}");
+
+            var ws = new WebSocketSharp.WebSocket(wsFullUrl);
+
+            // Set cookie explicitly
+            ws.SetCookie(new WebSocketSharp.Net.Cookie("channel-session", sessionResult.ChannelSessionCookie)
             {
-                Domain = new Uri(httpUrl).Host, // Extract domain from HTTP URL
-                Path = "/"
+                Domain = new Uri(httpUrl).Host,
+                Path = "/",
+                HttpOnly = false,
+                Expires = DateTime.Now.AddMinutes(60)
             });
 
-            Debug.WriteLine($"Cookie set for WebSocket: channel-session={sessionCookie}");
+            Debug.WriteLine($"[CLIENT] WebSocket cookie host: {new Uri(httpUrl).Host}");
+            Debug.WriteLine($"[CLIENT] Cookie set for WebSocket: channel-session={sessionResult.ChannelSessionCookie}");
 
             return ws;
         }
 
-        public WebSocketSharp.WebSocket ConnectToChannel(string channelName, string userId)
+        public WebSocketSharp.WebSocket ConnectToChannel(string channelName, string userId, bool forceNewSession = true)
         {
-            return ConnectToChannelAsync(channelName, userId).GetAwaiter().GetResult();
+            return ConnectToChannelAsync(channelName, userId, forceNewSession).GetAwaiter().GetResult();
         }
+
+        // Method to end session and clear cookies when logging out
+        public async Task EndSessionAsync(string channelName, string userId)
+        {
+            try
+            {
+                Debug.WriteLine("[CLIENT] Ending session and clearing cookies...");
+
+                // Notify server to invalidate session
+                var requestData = new
+                {
+                    channelName = channelName,
+                    userId = userId
+                };
+
+                var json = JsonSerializer.Serialize(requestData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var handler = new HttpClientHandler
+                {
+                    UseCookies = true,
+                    CookieContainer = cookieContainer
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    var response = await client.PostAsync($"{httpUrl}/api/end-session", content);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Debug.WriteLine("[CLIENT] Session ended on server");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[CLIENT] Failed to end session: {response.StatusCode}");
+                    }
+                }
+
+                // Clear cookies locally
+                ClearSessionCookies();
+
+                Debug.WriteLine("[CLIENT] Session cleanup completed");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CLIENT] Error ending session: {ex.Message}");
+            }
+        }
+    }
+
+    public class SessionResult
+    {
+        public string ChannelSessionCookie { get; set; }
+        public string ChannelName { get; set; }
     }
 }

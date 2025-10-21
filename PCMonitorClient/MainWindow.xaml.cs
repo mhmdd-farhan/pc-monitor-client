@@ -147,50 +147,50 @@ namespace PCMonitorClient
 
         public void CloseAllOtherApplications()
         {
-            try
-            {
-                int currentProcessId = Process.GetCurrentProcess().Id;
-                string currentProcessName = Process.GetCurrentProcess().ProcessName;
+            //try
+            //{
+            //    int currentProcessId = Process.GetCurrentProcess().Id;
+            //    string currentProcessName = Process.GetCurrentProcess().ProcessName;
 
-                Process[] processes = Process.GetProcesses();
+            //    Process[] processes = Process.GetProcesses();
 
-                foreach (Process process in processes)
-                {
-                    try
-                    {
-                        if (process.Id == currentProcessId)
-                            continue;
+            //    foreach (Process process in processes)
+            //    {
+            //        try
+            //        {
+            //            if (process.Id == currentProcessId)
+            //                continue;
 
-                        if (IsSystemProcess(process.ProcessName))
-                            continue;
+            //            if (IsSystemProcess(process.ProcessName))
+            //                continue;
 
-                        if (process.MainWindowHandle == IntPtr.Zero)
-                            continue;
+            //            if (process.MainWindowHandle == IntPtr.Zero)
+            //                continue;
 
-                        if (!process.CloseMainWindow())
-                        {
-                            if (!process.WaitForExit(2000))
-                            {
-                                process.Kill();
-                            }
-                        }
+            //            if (!process.CloseMainWindow())
+            //            {
+            //                if (!process.WaitForExit(2000))
+            //                {
+            //                    process.Kill();
+            //                }
+            //            }
 
-                        Debug.WriteLine($"Closed: {process.ProcessName}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Failed to close {process.ProcessName}: {ex.Message}");
-                    }
-                    finally
-                    {
-                        process.Dispose();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error closing applications: {ex.Message}");
-            }
+            //            Debug.WriteLine($"Closed: {process.ProcessName}");
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            Debug.WriteLine($"Failed to close {process.ProcessName}: {ex.Message}");
+            //        }
+            //        finally
+            //        {
+            //            process.Dispose();
+            //        }
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Debug.WriteLine($"Error closing applications: {ex.Message}");
+            //}
         }
 
         private bool IsSystemProcess(string processName)

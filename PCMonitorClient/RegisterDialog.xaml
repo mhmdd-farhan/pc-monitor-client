@@ -119,13 +119,13 @@
                              Width="260"/>
 
                     <!-- Site Name -->
-                    <Label x:Name="labelSiteName" Content="Site Name:" 
+                    <Label x:Name="labelSiteCode" Content="Site Code:" 
                            FontSize="13" 
                            Foreground="Black"
                            FontWeight="Bold" 
                            Padding="0,0,0,3"
                            Width="260"/>
-                    <TextBox x:Name="textSiteName" 
+                    <TextBox x:Name="textSiteCode" 
                              Height="35" 
                              FontSize="13"
                              Margin="0,0,0,10"

@@ -98,7 +98,7 @@ namespace PCMonitorClient
             labelEmail.Visibility = Visibility.Collapsed;
             labelPassword.Visibility = Visibility.Collapsed;
             labelPhoneNumber.Visibility = Visibility.Collapsed;
-            labelSiteName.Visibility = Visibility.Collapsed;
+            labelSiteCode.Visibility = Visibility.Collapsed;
             labelFullName.Visibility = Visibility.Collapsed;
             labelGender.Visibility = Visibility.Collapsed;
 
@@ -106,7 +106,7 @@ namespace PCMonitorClient
             textEmail.Visibility = Visibility.Collapsed;
             textPassword.Visibility = Visibility.Collapsed;
             textPhoneNumber.Visibility = Visibility.Collapsed;
-            textSiteName.Visibility = Visibility.Collapsed;
+            textSiteCode.Visibility = Visibility.Collapsed;
             textFullName.Visibility = Visibility.Collapsed;
             GenderComboBox.Visibility = Visibility.Collapsed;
 
@@ -168,8 +168,8 @@ namespace PCMonitorClient
                                     labelGender.Visibility = Visibility.Collapsed;
                                     GenderComboBox.Visibility = Visibility.Collapsed;
                                     checkIcButton.Visibility = Visibility.Collapsed;
-                                    labelSiteName.Visibility = Visibility.Collapsed;
-                                    textSiteName.Visibility = Visibility.Collapsed;
+                                    labelSiteCode.Visibility = Visibility.Collapsed;
+                                    textSiteCode.Visibility = Visibility.Collapsed;
 
                                     // Show the other
                                     labelEmail.Visibility = Visibility.Visible;
@@ -194,8 +194,8 @@ namespace PCMonitorClient
                                     textPassword.Visibility = Visibility.Visible;
                                     labelPhoneNumber.Visibility = Visibility.Visible;
                                     textPhoneNumber.Visibility = Visibility.Visible;
-                                    labelSiteName.Visibility = Visibility.Visible;
-                                    textSiteName.Visibility = Visibility.Visible;
+                                    labelSiteCode.Visibility = Visibility.Visible;
+                                    textSiteCode.Visibility = Visibility.Visible;
                                     labelFullName.Visibility = Visibility.Visible;
                                     textFullName.Visibility = Visibility.Visible;
                                     labelGender.Visibility = Visibility.Visible;
@@ -275,7 +275,7 @@ namespace PCMonitorClient
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(textSiteName.Text))
+            if (string.IsNullOrWhiteSpace(textSiteCode.Text))
             {
                 MessageBox.Show("Please enter your site name.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -304,7 +304,7 @@ namespace PCMonitorClient
                     password = textPassword.Text,
                     ic_no = textIcNumber.Text,
                     phone_no = textPhoneNumber.Text,
-                    site_name = textSiteName.Text,
+                    site_code = textSiteCode.Text,
                     gender = genderValue,
                     full_name = textFullName.Text
                 };
@@ -348,7 +348,7 @@ namespace PCMonitorClient
                         textPassword.Clear();
                         textIcNumber.Clear();
                         textPhoneNumber.Clear();
-                        textSiteName.Clear();
+                        textSiteCode.Clear();
                         textFullName.Clear();
 
                         MessageBox.Show("Registration success, You can login now.");
@@ -478,6 +478,7 @@ namespace PCMonitorClient
 
                 if (existingLogin != null)
                 {
+                    // Reinitialize keyboard hook
                     var hookField = typeof(LoginDialog).GetField("_keyboardHook",
                         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
@@ -510,6 +511,13 @@ namespace PCMonitorClient
                         existingLogin.Show();
                         existingLogin.Activate();
                         existingLogin.Focus();
+
+                        if (SharedData.startFlag < 2)
+                        {
+                            SharedData.startFlag = 0;
+                            SharedData.logoutFlag = false;
+                        }
+
                         this.Close();
                     }), System.Windows.Threading.DispatcherPriority.Background);
                 }
@@ -517,6 +525,12 @@ namespace PCMonitorClient
                 {
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
+                        if (SharedData.startFlag < 2)
+                        {
+                            SharedData.startFlag = 0;
+                            SharedData.logoutFlag = false;
+                        }
+
                         LoginDialog loginDialog = new LoginDialog();
                         loginDialog.Show();
                         loginDialog.Activate();
@@ -562,7 +576,7 @@ namespace PCMonitorClient
             textPassword.Clear();
             textIcNumber.Clear();
             textPhoneNumber.Clear();
-            textSiteName.Clear();
+            textSiteCode.Clear();
             textFullName.Clear();
         }
 

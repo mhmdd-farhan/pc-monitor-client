@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NAudio.Wave;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using SIPSorcery.Media;
@@ -73,6 +74,12 @@ namespace PCMonitorClient
 
         private CancellationTokenSource _cancellationTokenSource;
         private SemaphoreSlim _initializationLock = new SemaphoreSlim(1, 1);
+
+        private static System.Windows.Threading.DispatcherTimer _statusMonitoringTimer;
+        private static readonly object _timerLock = new object();
+        private static bool _isMonitoringActive = false;
+
+        private static System.Timers.Timer _realTimeBroadCastTimer = new System.Timers.Timer();
         public LoginDialog()
         {
             if (File.Exists("Settings.dll") == false)
@@ -136,6 +143,24 @@ namespace PCMonitorClient
             {
                 _mainWindow = new MainWindow();
             }
+            lock (_timerLock)
+            {
+                if (_statusMonitoringTimer == null)
+                {
+                    Debug.WriteLine("=== INITIALIZING MONITORING TIMER ===");
+                    InitializeStatusMonitoring();
+                }
+                else
+                {
+                    Debug.WriteLine($"=== TIMER EXISTS - IsEnabled: {_statusMonitoringTimer.IsEnabled} ===");
+                    // Pastikan timer berjalan
+                    if (!_statusMonitoringTimer.IsEnabled)
+                    {
+                        _statusMonitoringTimer.Start();
+                        Debug.WriteLine("=== TIMER RESTARTED ===");
+                    }
+                }
+            }
             // Open ws and peer connection.
             if (!_isInitialized)
             {
@@ -148,7 +173,7 @@ namespace PCMonitorClient
         {
             try
             {
-                _ = Task.Run(async () => await RunRealtimeBroadcast());
+                RunRealtimeBroadcast();
             }
             catch (Exception ex)
             {
@@ -157,9 +182,259 @@ namespace PCMonitorClient
             }
         }
 
+        private void LoginDialog_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if ((bool)e.NewValue == true)
+            {
+                Debug.WriteLine("=== LOGIN WINDOW BECAME VISIBLE ===");
+
+                // Pastikan timer berjalan saat window visible
+                lock (_timerLock)
+                {
+                    if (_statusMonitoringTimer == null)
+                    {
+                        Debug.WriteLine("Timer is null, initializing...");
+                        InitializeStatusMonitoring();
+                    }
+                    else if (!_statusMonitoringTimer.IsEnabled)
+                    {
+                        Debug.WriteLine("Timer is stopped, restarting...");
+                        _statusMonitoringTimer.Start();
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Timer is running (Interval: {_statusMonitoringTimer.Interval.TotalMilliseconds}ms)");
+                    }
+                }
+
+                // Reinitialize keyboard hook
+                try
+                {
+                    if (_keyboardHook == null)
+                    {
+                        Debug.WriteLine("Reinitializing keyboard hook...");
+                        _keyboardHook = new KeyboardHook();
+                        _keyboardHook.SetHook();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error reinitializing keyboard hook: {ex.Message}");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("=== LOGIN WINDOW BECAME HIDDEN ===");
+            }
+        }
+
+
+        private void InitializeStatusMonitoring()
+        {
+            lock (_timerLock)
+            {
+                if (_statusMonitoringTimer != null)
+                {
+                    Debug.WriteLine("Status monitoring already initialized");
+                    return;
+                }
+
+                _statusMonitoringTimer = new System.Windows.Threading.DispatcherTimer();
+                _statusMonitoringTimer.Interval = TimeSpan.FromMilliseconds(500);
+                _statusMonitoringTimer.Tick += StatusMonitoring_Tick;
+                _statusMonitoringTimer.Start();
+
+                Debug.WriteLine("=== STATUS MONITORING INITIALIZED ===");
+            }
+        }
+
+        private async void StatusMonitoring_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_isMonitoringActive)
+                {
+                    return;
+                }
+
+                _isMonitoringActive = true;
+
+                var currentStartFlag = SharedData.startFlag;
+                var currentLogoutFlag = SharedData.logoutFlag;
+
+                Debug.WriteLine($"[Monitor] startFlag={currentStartFlag}, logoutFlag={currentLogoutFlag}, IsVisible={this.IsVisible}");
+
+                // Handle login success (startFlag = 1)
+                if (currentStartFlag == 1 && !currentLogoutFlag && this.IsVisible)
+                {
+                    await HandleLoginSuccess();
+                }
+                // Handle logout (logoutFlag = true AND was logged in)
+                else if (currentLogoutFlag && currentStartFlag >= 2)
+                {
+                    await HandleLogout();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR in StatusMonitoring_Tick: {ex.Message}\n{ex.StackTrace}");
+            }
+            finally
+            {
+                _isMonitoringActive = false;
+            }
+        }
+
+        private async Task HandleLoginSuccess()
+        {
+            Debug.WriteLine("=== HANDLING LOGIN SUCCESS ===");
+
+            try
+            {
+                if (SharedData.startFlag != 1)
+                {
+                    Debug.WriteLine($"Invalid state for login: startFlag={SharedData.startFlag}");
+                    return;
+                }
+
+                // Set flag FIRST to prevent re-entry
+                SharedData.startFlag = 2;
+                SharedData.logoutFlag = false;
+
+                // Dispose keyboard hook
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        _keyboardHook?.Dispose();
+                        _keyboardHook = null;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error disposing keyboard hook: {ex.Message}");
+                    }
+                });
+
+                // Reset and show main window
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    _mainWindow.ResetMonitoringData();
+                    _mainWindow.Show();
+                    _mainWindow.Activate();
+                    _mainWindow.timer?.Start();
+                    this.Hide();
+                });
+
+                Debug.WriteLine("Main window shown successfully");
+
+                // Initialize WebSocket connection with delay
+                await Task.Delay(500);
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await RunAsync();
+                        Debug.WriteLine("WebSocket connection initialized successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"RunAsync error: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR in HandleLoginSuccess: {ex.Message}");
+                // Rollback state
+                SharedData.startFlag = 1;
+            }
+        }
+
+        private async Task HandleLogout()
+        {
+            Debug.WriteLine("=== HANDLING LOGOUT ===");
+
+            try
+            {
+                // Validasi apakah benar-benar perlu logout
+                if (SharedData.startFlag != 2 && SharedData.startFlag != 3)
+                {
+                    Debug.WriteLine($"Invalid state for logout: startFlag={SharedData.startFlag}");
+                    return;
+                }
+
+                // Set flags FIRST to prevent re-entry
+                var wasLoggedIn = SharedData.startFlag == 2;
+                SharedData.startFlag = 3;
+                SharedData.logoutFlag = false;
+
+                // Cleanup if was logged in
+                if (wasLoggedIn)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await LogOutAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error in LogOutAsync: {ex.Message}");
+                        }
+                    });
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        _mainWindow.timer?.Stop();
+                        _mainWindow.Hide();
+                        _mainWindow.CloseAllOtherApplications();
+                    });
+                }
+
+                // Show login window
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    this.Show();
+                    this.Activate();
+                });
+
+                // Reinitialize keyboard hook
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        if (_keyboardHook == null)
+                        {
+                            _keyboardHook = new KeyboardHook();
+                        }
+                        _keyboardHook.SetHook();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error reinitializing keyboard hook: {ex.Message}");
+                    }
+                });
+
+                Debug.WriteLine("Logout completed successfully");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR in HandleLogout: {ex.Message}");
+            }
+        }
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateUI();
+
+            lock (_timerLock)
+            {
+                if (_statusMonitoringTimer == null)
+                {
+                    InitializeStatusMonitoring();
+                }
+            }
         }
         public void loginBtn_Click(object sender, RoutedEventArgs e)
         {
@@ -201,7 +476,6 @@ namespace PCMonitorClient
         }
         public async Task LoginAsync()
         {
-            // Edge function URL
             string login_member_url = $"{SUPABASE_URL}/functions/v1/login-member";
             string apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1YW5ld3licXhyZGZ2cmR5ZXFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1NDU3MzAsImV4cCI6MjA1NDEyMTczMH0.Sy_h_BHoN23rzRFpVc9ARN2wimJ8lRPEVh_hpw_7tlY";
 
@@ -268,25 +542,23 @@ namespace PCMonitorClient
                     catch (Exception ex)
                     {
                         MessageBox.Show("Login Failed: This PC has been booked by another member!");
+                        return;
                     }
 
                     textMemberShipId.Clear();
                     textIcNumber.Clear();
                     textSitePassword.Clear();
 
-                    SharedData.startFlag = 1;
+                    Debug.WriteLine($"=== LOGIN SUCCESS - Duration: {SharedData.duration} minutes ===");
+
                     SharedData.logoutFlag = false;
+                    SharedData.startFlag = 1; // This will trigger the monitoring timer
 
-                    Debug.WriteLine($"Duration: {SharedData.duration} minutes");
-
-                    if (SharedData.startFlag == 1 && SharedData.logoutFlag == false)
-                        MessageBox.Show(Properties.Resources.msgSuccess);
-
-                    StartStatusMonitoring();
+                    MessageBox.Show(Properties.Resources.msgSuccess);
                 }
                 catch (Exception hre)
                 {
-                    MessageBox.Show($"Login Failed: Sosmething wrong while login!");
+                    MessageBox.Show($"Login Failed: Something wrong while login!\n{hre.Message}");
                 }
                 finally
                 {
@@ -295,63 +567,78 @@ namespace PCMonitorClient
             }
         }
 
-        private void StartStatusMonitoring()
+        private void StopStatusMonitoring()
         {
-            var timer = new System.Windows.Threading.DispatcherTimer();
-            timer.Interval = TimeSpan.FromMilliseconds(500);
-            timer.Tick += async (s, e) =>
+            lock (_timerLock)
             {
-                if (SharedData.startFlag == 1)
+                if (_statusMonitoringTimer != null)
                 {
-                    try
-                    {
-                        _keyboardHook?.Dispose();
-                        _keyboardHook = null;
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error disposing keyboard hook: {ex.Message}");
-                    }
-                    _mainWindow.ResetMonitoringData();
-                    _mainWindow.Show();
-                    _mainWindow.timer?.Start();
-                    this.Hide();
-                    SharedData.logoutFlag = false;
-                    SharedData.startFlag = 2;
-                    _ = Task.Run(async () => await RunAsync());
+                    _statusMonitoringTimer.Stop();
+                    _statusMonitoringTimer.Tick -= StatusMonitoring_Tick;
+                    _statusMonitoringTimer = null;
+                    _isMonitoringActive = false;
+                    Debug.WriteLine("=== STATUS MONITORING STOPPED ===");
                 }
-                else if (SharedData.logoutFlag)
-                {
-                    Debug.WriteLine("Logout detected - hiding main window");
-                    _ = Task.Run(async () => await LogOutAsync());
-                    _mainWindow.timer?.Stop();
-                    _mainWindow.Hide();
-                    _mainWindow.CloseAllOtherApplications();
-                    this.Show();
-                    SharedData.logoutFlag = false;
-                    SharedData.startFlag = 3;
-                    try
-                    {
-                        if (_keyboardHook == null)
-                        {
-                            _keyboardHook = new KeyboardHook();
-                        }
-                        _keyboardHook.SetHook();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error reinitializing keyboard hook: {ex.Message}");
-                    }
-                }
-            };
-            timer.Start();
+            }
         }
+
+        //private void StartStatusMonitoring()
+        //{
+        //    var timer = new System.Windows.Threading.DispatcherTimer();
+        //    timer.Interval = TimeSpan.FromMilliseconds(500);
+        //    timer.Tick += async (s, e) =>
+        //    {
+        //        if (SharedData.startFlag == 1)
+        //        {
+        //            try
+        //            {
+        //                _keyboardHook?.Dispose();
+        //                _keyboardHook = null;
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Debug.WriteLine($"Error disposing keyboard hook: {ex.Message}");
+        //            }
+        //            _mainWindow.ResetMonitoringData();
+        //            _mainWindow.Show();
+        //            _mainWindow.timer?.Start();
+        //            this.Hide();
+        //            SharedData.logoutFlag = false;
+        //            SharedData.startFlag = 2;
+        //            _ = Task.Run(async () => await RunAsync());
+        //        }
+        //        else if (SharedData.logoutFlag)
+        //        {
+        //            Debug.WriteLine("Logout detected - hiding main window");
+        //            _ = Task.Run(async () => await LogOutAsync());
+        //            _mainWindow.timer?.Stop();
+        //            _mainWindow.Hide();
+        //            _mainWindow.CloseAllOtherApplications();
+        //            this.Show();
+        //            SharedData.logoutFlag = false;
+        //            SharedData.startFlag = 3;
+        //            try
+        //            {
+        //                if (_keyboardHook == null)
+        //                {
+        //                    _keyboardHook = new KeyboardHook();
+        //                }
+        //                _keyboardHook.SetHook();
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Debug.WriteLine($"Error reinitializing keyboard hook: {ex.Message}");
+        //            }
+        //        }
+        //    };
+        //    timer.Start();
+        //}
 
 
 
         private async Task LogOutAsync()
         {
-            // Edge function URL to send the remain time, CPU Usage, etc.
+            // Edge function URL
             string pc_logout_url = $"{SUPABASE_URL}/functions/v1/pc-end-session";
             string apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1YW5ld3licXhyZGZ2cmR5ZXFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1NDU3MzAsImV4cCI6MjA1NDEyMTczMH0.Sy_h_BHoN23rzRFpVc9ARN2wimJ8lRPEVh_hpw_7tlY";
             // Data to include in the request (e.g., JSON)
@@ -379,6 +666,9 @@ namespace PCMonitorClient
                     HttpResponseMessage response = await client.PostAsync(pc_logout_url, content);
                     response.EnsureSuccessStatusCode();
 
+                    var wsClient = new ChannelAwareWebsocket();
+                    await wsClient.EndSessionAsync(channelName, userId);
+
                     Debug.WriteLine("Logout API called successfully");
                 }
                 catch (Exception hre)
@@ -387,7 +677,7 @@ namespace PCMonitorClient
                 }
             }
         }
-        private async Task RunRealtimeBroadcast()
+        private async void RunRealtimeBroadcast()
         {
             var messenger = new RealtimeMessenger();
             await messenger.InitializeAsync($"remote-{SharedData.pcName}-{SharedData.siteID}");
@@ -395,10 +685,9 @@ namespace PCMonitorClient
             var siteMessager = new RealtimeMessenger();
             await siteMessager.InitializeAsync($"site-{SharedData.siteID}");
 
-            System.Timers.Timer timer = new System.Timers.Timer();
-            timer.Interval = 1000;
-            timer.Elapsed += async (s, e) => { };
-            timer.Start();
+            _realTimeBroadCastTimer.Interval = 1000;
+            _realTimeBroadCastTimer.Elapsed += async (s, e) => { };
+            _realTimeBroadCastTimer.Start();
         }
         private void langSelect_Click(object sender, RoutedEventArgs e)
         {
@@ -464,25 +753,37 @@ namespace PCMonitorClient
                 textMemberShipId.Visibility = Visibility.Visible;
                 textIcNumber.Visibility = Visibility.Collapsed;
                 textSitePassword.Visibility = Visibility.Collapsed;
+
+                textIcNumber.Clear();
+                textSitePassword.Clear();
             }
             else if (comboSelect.SelectedItem == optionIcNumber)
             {
                 textMemberShipId.Visibility = Visibility.Collapsed;
                 textSitePassword.Visibility = Visibility.Collapsed;
                 textIcNumber.Visibility = Visibility.Visible;
+
+                textMemberShipId.Clear();
+                textSitePassword.Clear();
             }
             else if (comboSelect.SelectedItem == optionSitePassword)
             {
                 textSitePassword.Visibility = Visibility.Visible;
                 textIcNumber.Visibility = Visibility.Collapsed;
                 textMemberShipId.Visibility = Visibility.Collapsed;
+
+                textMemberShipId.Clear();
+                textIcNumber.Clear();
             }
         }
 
         private void RegisterLink_Click(object sender, RoutedEventArgs e)
         {
+
             _keyboardHook?.Dispose();
             _keyboardHook = null;
+
+            _ = Task.Run(async () => await CleanupConnection());
 
             RegisterDialog registerDialog = new RegisterDialog();
             registerDialog.Show();
@@ -491,10 +792,14 @@ namespace PCMonitorClient
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
-            if (Application.Current.Windows.Count > 1)
+            var hasRegisterDialog = Application.Current.Windows.OfType<RegisterDialog>().Any();
+            var hasMainWindow = Application.Current.Windows.OfType<MainWindow>().Any();
+
+            if (hasRegisterDialog || (hasMainWindow && SharedData.startFlag == 2))
             {
                 e.Cancel = true;
                 this.Hide();
+                return;
             }
         }
 
@@ -502,10 +807,12 @@ namespace PCMonitorClient
         {
             try
             {
+                // Stop monitoring
+                StopStatusMonitoring();
+
                 // Cancel all async operations
                 _cancellationTokenSource?.Cancel();
 
-                // Dispose keyboard hook dengan aman
                 try
                 {
                     _keyboardHook?.Dispose();
@@ -541,10 +848,20 @@ namespace PCMonitorClient
 
         public static async Task RunAsync()
         {
-            await _connectionLock.WaitAsync();
+            if (!await _connectionLock.WaitAsync(5000))
+            {
+                Debug.WriteLine("Could not acquire connection lock, another connection attempt in progress");
+                return;
+            }
 
             try
             {
+                if (SharedData.startFlag != 2)
+                {
+                    Debug.WriteLine($"Not in logged-in state (startFlag={SharedData.startFlag}), aborting");
+                    return;
+                }
+
                 if (_isReconnecting)
                 {
                     Debug.WriteLine("Reconnection already in progress, skipping...");
@@ -555,9 +872,16 @@ namespace PCMonitorClient
 
                 await CleanupConnection();
 
-                await Task.Delay(500);
+                await Task.Delay(1000);
+
+                if (SharedData.startFlag != 2)
+                {
+                    Debug.WriteLine("State changed during cleanup, aborting");
+                    return;
+                }
+
                 var wsClient = new ChannelAwareWebsocket();
-                ws = await wsClient.ConnectToChannelAsync(channelName, userId);
+                ws = await wsClient.ConnectToChannelAsync(channelName, userId, forceNewSession: true);
                 ws.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
                 ws.SslConfiguration.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
 
@@ -1184,8 +1508,6 @@ namespace PCMonitorClient
                 {
                     Debug.WriteLine("No peer connection available, initializing...");
                     await InitialPeerConnection();
-
-                    // Wait a bit for initialization
                     await Task.Delay(500);
 
                     if (pc == null)
@@ -1208,17 +1530,34 @@ namespace PCMonitorClient
 
                 Debug.WriteLine("Received offer from server.");
 
-                // Extract SDP
-                var sdpData = body["sdp"];
-                string sdp;
-
-                if (sdpData is Newtonsoft.Json.Linq.JObject)
+                // Parse body as JObject
+                var bodyObj = body as Newtonsoft.Json.Linq.JObject;
+                if (bodyObj == null)
                 {
-                    sdp = (string)sdpData["sdp"];
+                    Debug.WriteLine("ERROR: Body is not a JObject");
+                    return;
                 }
-                else
+
+                // Extract SDP - it could be nested in body["sdp"] or directly in body
+                string sdp = null;
+                var sdpData = bodyObj["sdp"];
+
+                if (sdpData != null)
                 {
-                    sdp = (string)sdpData;
+                    if (sdpData is Newtonsoft.Json.Linq.JObject sdpObj)
+                    {
+                        sdp = sdpObj["sdp"]?.ToString();
+                    }
+                    else if (sdpData is Newtonsoft.Json.Linq.JValue)
+                    {
+                        sdp = sdpData.ToString();
+                    }
+                }
+
+                if (string.IsNullOrEmpty(sdp))
+                {
+                    Debug.WriteLine("ERROR: No valid SDP found in offer");
+                    return;
                 }
 
                 Debug.WriteLine($"SDP received: {sdp?.Substring(0, Math.Min(100, sdp.Length))}...");
@@ -1231,7 +1570,7 @@ namespace PCMonitorClient
 
                 // Set remote description
                 pc.setRemoteDescription(offerDesc);
-                Debug.WriteLine("Remote description set successfully");
+                Debug.WriteLine("✅ Remote description set successfully");
 
                 // Process buffered ICE candidates
                 if (iceBuffer.Count > 0)
@@ -1242,11 +1581,11 @@ namespace PCMonitorClient
                         try
                         {
                             pc.addIceCandidate(candidate);
-                            Debug.WriteLine("Added buffered ICE candidate");
+                            Debug.WriteLine("✅ Added buffered ICE candidate");
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"Error adding buffered ICE candidate: {ex.Message}");
+                            Debug.WriteLine($"❌ Error adding buffered ICE candidate: {ex.Message}");
                         }
                     }
                     iceBuffer.Clear();
@@ -1255,8 +1594,9 @@ namespace PCMonitorClient
                 // Create and send answer
                 var answer = pc.createAnswer();
                 await pc.setLocalDescription(answer);
-                Debug.WriteLine("Answer created and local description set");
+                Debug.WriteLine("✅ Answer created and local description set");
 
+                // IMPORTANT: Send answer with correct format
                 var answerMsg = new
                 {
                     type = "send_answer",
@@ -1264,21 +1604,17 @@ namespace PCMonitorClient
                     {
                         channelName,
                         userId,
-                        sdp = new
-                        {
-                            type = "answer",
-                            sdp = answer.sdp
-                        }
+                        sdp = answer // Send the answer object directly, not nested
                     }
                 };
 
                 var jsonMessage = Newtonsoft.Json.JsonConvert.SerializeObject(answerMsg);
                 ws.Send(jsonMessage);
-                Debug.WriteLine("Answer sent to server");
+                Debug.WriteLine("✅ Answer sent to server");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error handling offer: {ex.Message}");
+                Debug.WriteLine($"❌ Error handling offer: {ex.Message}");
                 Debug.WriteLine($"Stack trace: {ex.StackTrace}");
 
                 // Try to recover by reinitializing
@@ -1293,75 +1629,62 @@ namespace PCMonitorClient
             {
                 Debug.WriteLine($"Received ICE candidate data: {body}");
 
-                var candidateData = body["candidate"];
-                var sdpMidData = body["sdpMid"];
-                var sdpMLineIndexData = body["sdpMLineIndex"];
-                var usernameFragmentData = body["usernameFragment"];
-                string candidate;
-                string sdpMid;
-                ushort sdpMLineIndex;
-                string usernameFragment;
+                // Parse body as JObject for safer access
+                var bodyObj = body as Newtonsoft.Json.Linq.JObject;
+                if (bodyObj == null)
+                {
+                    Debug.WriteLine("Body is not a valid JObject");
+                    return;
+                }
 
-                if (candidateData is Newtonsoft.Json.Linq.JObject)
+                // ICE candidate data is inside body["candidate"]
+                var candidateObj = bodyObj["candidate"] as Newtonsoft.Json.Linq.JObject;
+                if (candidateObj == null)
                 {
-                    candidate = (string)candidateData["candidate"];
+                    Debug.WriteLine("candidate field is missing or not a JObject");
+                    return;
                 }
-                else
+
+                // Extract fields from the candidate object
+                string candidate = candidateObj["candidate"]?.ToString();
+                string sdpMid = candidateObj["sdpMid"]?.ToString();
+                ushort? sdpMLineIndex = candidateObj["sdpMLineIndex"]?.Value<ushort?>();
+                string usernameFragment = candidateObj["usernameFragment"]?.ToString();
+
+                Debug.WriteLine($"Extracted - candidate: {candidate}");
+                Debug.WriteLine($"Extracted - sdpMid: {sdpMid}");
+                Debug.WriteLine($"Extracted - sdpMLineIndex: {sdpMLineIndex}");
+                Debug.WriteLine($"Extracted - usernameFragment: {usernameFragment}");
+
+                if (string.IsNullOrEmpty(candidate))
                 {
-                    candidate = (string)candidateData;
+                    Debug.WriteLine("Invalid or empty candidate string");
+                    return;
                 }
-                if (sdpMidData is Newtonsoft.Json.Linq.JObject)
-                {
-                    sdpMid = (string)candidateData["sdpMid"];
-                }
-                else
-                {
-                    sdpMid = (string)sdpMidData;
-                }
-                if (sdpMLineIndexData is Newtonsoft.Json.Linq.JObject)
-                {
-                    sdpMLineIndex = (ushort)sdpMLineIndexData["sdpMLineIndex"];
-                }
-                else
-                {
-                    sdpMLineIndex = (ushort)sdpMLineIndexData;
-                }
-                if (usernameFragmentData is Newtonsoft.Json.Linq.JObject)
-                {
-                    usernameFragment = (string)usernameFragmentData["usernameFragment"];
-                }
-                else
-                {
-                    usernameFragment = (string)usernameFragmentData;
-                }
-                Debug.WriteLine($"Extracted candidate string: {candidate}");
 
                 var candidateInit = new RTCIceCandidateInit
                 {
                     candidate = candidate,
                     sdpMid = sdpMid,
-                    sdpMLineIndex = sdpMLineIndex,
+                    sdpMLineIndex = sdpMLineIndex ?? 0,
                     usernameFragment = usernameFragment
                 };
 
                 if (pc != null && pc.currentRemoteDescription != null)
                 {
                     pc.addIceCandidate(candidateInit);
-                    Debug.WriteLine("ICE candidate added successfully");
+                    Debug.WriteLine("✅ ICE candidate added successfully");
                 }
                 else
                 {
                     // Buffer the candidate until remote description is set
-                    iceBuffer.Add(new RTCIceCandidateInit
-                    {
-                        candidate = candidate
-                    });
-                    Debug.WriteLine("ICE candidate buffered (remote description not set yet)");
+                    iceBuffer.Add(candidateInit);
+                    Debug.WriteLine("📦 ICE candidate buffered (remote description not set yet)");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error handling ICE candidate: {ex.Message}");
+                Debug.WriteLine($"❌ Error handling ICE candidate: {ex.Message}");
                 Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
@@ -1385,6 +1708,28 @@ namespace PCMonitorClient
 
             try
             {
+                if (ws != null && ws.ReadyState == WebSocketState.Open)
+                {
+                    try
+                    {
+                        var quitMsg = new
+                        {
+                            type = "quit",
+                            body = new { channelName, userId }
+                        };
+
+                        ws.Send(Newtonsoft.Json.JsonConvert.SerializeObject(quitMsg));
+
+                        // Wait longer to ensure message is sent and processed
+                        await Task.Delay(1000); // INCREASED from 200ms
+
+                        Debug.WriteLine("Quit message sent successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error sending quit message: {ex.Message}");
+                    }
+                }
                 // 1. Stop and dispose video source
                 if (_videoSource != null)
                 {

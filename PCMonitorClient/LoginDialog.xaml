@@ -14,7 +14,8 @@
         Topmost="True" 
         Background="#FFF0F0F0" 
         Closing="Window_Closing" 
-        Closed="Window_Closed" 
+        Closed="Window_Closed"
+        IsVisibleChanged="LoginDialog_IsVisibleChanged"
         Loaded="Window_Loaded">
     <Grid>
         <Grid.ColumnDefinitions>
