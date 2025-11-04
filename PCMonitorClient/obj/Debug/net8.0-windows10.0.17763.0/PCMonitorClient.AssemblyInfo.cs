@@ -13,11 +13,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("PCMonitorClient")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.7")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5b325c88a896a9d038f5474b19b0b826d84bc7c6")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+130b250152f6c3cafd82c09b2241b60611a71e92")]
 [assembly: System.Reflection.AssemblyProductAttribute("PCMonitorClient")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PCMonitorClient")]
-[assembly: System.Reflection.AssemblyVersionAttribute("1.0.7")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.8")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows10.0.17763.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows10.0.17763.0")]
 

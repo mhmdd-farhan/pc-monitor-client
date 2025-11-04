@@ -59,7 +59,7 @@ namespace PCMonitorClient {
             
             #line default
             #line hidden
-            System.Uri resourceLocater = new System.Uri("/PCMonitorClient;V1.0.7;component/app.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/PCMonitorClient;V1.0.8;component/app.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\App.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

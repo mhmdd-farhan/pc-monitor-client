@@ -222,7 +222,7 @@ namespace PCMonitorClient {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/PCMonitorClient;V1.0.7;component/registerdialog.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/PCMonitorClient;V1.0.8;component/registerdialog.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\RegisterDialog.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
