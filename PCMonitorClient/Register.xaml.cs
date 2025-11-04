@@ -48,76 +48,112 @@ namespace PCMonitorClient
             LoginAsync();
         }
 
-        public async Task LoginAsync()
+        public async void LoginAsync()
         {
             // Edge function URL
             string login_pc_url = $"{SUPABASE_URL}/functions/v1/login-pc";
-
             // API key or token (if needed)
             string apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1YW5ld3licXhyZGZ2cmR5ZXFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1NDU3MzAsImV4cCI6MjA1NDEyMTczMH0.Sy_h_BHoN23rzRFpVc9ARN2wimJ8lRPEVh_hpw_7tlY";
-
             // Data to include in the request (e.g., JSON)
             var requestData = new
             {
                 pc_name = pcNameBox.Text,
-                site_code = siteCodeBox.Text
+                refid_mcmc = refIdBox.Text
             };
             // Serialize to JSON string
             string jsonData = JsonSerializer.Serialize(requestData);
-
             registerBtn.IsEnabled = false;
-
             // Create HttpClient instance
             using (HttpClient client = new HttpClient())
             {
                 // Add Authorization header (if needed)
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
                 // Create HttpContent with JSON data
                 var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
                 try
                 {
                     // Send POST request
                     HttpResponseMessage response = await client.PostAsync(login_pc_url, content);
-                    response.EnsureSuccessStatusCode();
-
                     // Read and output the response
                     var responseBody = await response.Content.ReadAsStringAsync();
- 
+
+                    Debug.WriteLine($"Response: {responseBody}");
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        try
+                        {
+                            var jsonDocChecker = JsonDocument.Parse(responseBody);
+                            if (jsonDocChecker.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                            {
+                                string errorMessage = errorElement.GetString() ?? "Unknown error occurred.";
+                                MessageBox.Show($"{errorMessage}");
+                            }
+                            else
+                            {
+                                MessageBox.Show($"{responseBody}");
+                            }
+                        }
+                        catch
+                        {
+                            MessageBox.Show($"Error: {responseBody}");
+                        }
+                        return;
+                    }
+
                     var jsonDoc = JsonDocument.Parse(responseBody);
                     int pcID = 0;
                     int siteID = 0;
                     string siteName = "";
+
                     if (jsonDoc.RootElement.TryGetProperty("pcData", out JsonElement pcElement))
                     {
-                        pcID = int.Parse(pcElement.GetProperty("id").ToString());
-                        siteID = int.Parse(pcElement.GetProperty("site_id").ToString());
+                        if (pcElement.TryGetProperty("id", out JsonElement idElement))
+                        {
+                            pcID = idElement.ValueKind == JsonValueKind.Number
+                                ? idElement.GetInt32()
+                                : int.Parse(idElement.GetString() ?? "0");
+                        }
+
+                        if (pcElement.TryGetProperty("site_id", out JsonElement siteIdElement))
+                        {
+                            siteID = siteIdElement.ValueKind == JsonValueKind.Number
+                                ? siteIdElement.GetInt32()
+                                : int.Parse(siteIdElement.GetString() ?? "0");
+                        }
                     }
+
                     if (jsonDoc.RootElement.TryGetProperty("siteData", out JsonElement siteElement))
                     {
-                        siteName = siteElement.GetProperty("sitename").ToString();
+                        if (siteElement.TryGetProperty("sitename", out JsonElement sitenameElement))
+                        {
+                            siteName = sitenameElement.GetString() ?? "";
+                        }
                     }
+
                     var pcData = new
                     {
                         pc_id = pcID,
                         pc_name = pcNameBox.Text,
                         site_id = siteID,
-                        site_code = siteCodeBox.Text,
+                        refid_mcmc = refIdBox.Text,
                         site_name = siteName
                     };
+
                     jsonData = JsonSerializer.Serialize(pcData);
                     byte[] encryptedBytes = EncryptStringToBytes_Aes(jsonData, SharedData.key, SharedData.iv);
-
                     File.WriteAllBytes("Settings.dll", encryptedBytes);
-                    
-                    MessageBox.Show(Properties.Resources.msgSuccess);
 
+                    MessageBox.Show(Properties.Resources.msgSuccess);
                     this.Close();
                 }
-                catch (HttpRequestException hre)
+                catch (JsonException jsonEx)
                 {
-                    MessageBox.Show(Properties.Resources.msgFaild);
+                    MessageBox.Show($"JSON Error: {jsonEx.Message}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"{Properties.Resources.msgFaild}\nDetails: {ex.Message}");
                 }
                 finally
                 {
@@ -178,6 +214,6 @@ namespace PCMonitorClient
 
         public required string site_name { get; set; }
         public required int site_id { get; set; }
-        public required string site_code { get; set; }
+        public required string refid_mcmc { get; set; }
     }
 }

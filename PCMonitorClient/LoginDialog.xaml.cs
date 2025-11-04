@@ -153,7 +153,7 @@ namespace PCMonitorClient
                 else
                 {
                     Debug.WriteLine($"=== TIMER EXISTS - IsEnabled: {_statusMonitoringTimer.IsEnabled} ===");
-                    // Pastikan timer berjalan
+           
                     if (!_statusMonitoringTimer.IsEnabled)
                     {
                         _statusMonitoringTimer.Start();
@@ -188,7 +188,6 @@ namespace PCMonitorClient
             {
                 Debug.WriteLine("=== LOGIN WINDOW BECAME VISIBLE ===");
 
-                // Pastikan timer berjalan saat window visible
                 lock (_timerLock)
                 {
                     if (_statusMonitoringTimer == null)
@@ -297,6 +296,12 @@ namespace PCMonitorClient
                     return;
                 }
 
+                if (SharedData.duration == 0)
+                {
+                    Debug.WriteLine("Setting Manual duration..");
+                    SharedData.duration = 60; // Default to 60 minutes if not set
+                }
+
                 // Set flag FIRST to prevent re-entry
                 SharedData.startFlag = 2;
                 SharedData.logoutFlag = false;
@@ -357,7 +362,6 @@ namespace PCMonitorClient
 
             try
             {
-                // Validasi apakah benar-benar perlu logout
                 if (SharedData.startFlag != 2 && SharedData.startFlag != 3)
                 {
                     Debug.WriteLine($"Invalid state for logout: startFlag={SharedData.startFlag}");
@@ -377,6 +381,7 @@ namespace PCMonitorClient
                         try
                         {
                             await LogOutAsync();
+                            await _mainWindow.PerformLogoutAsync();
                         }
                         catch (Exception ex)
                         {
@@ -679,11 +684,23 @@ namespace PCMonitorClient
         }
         private async void RunRealtimeBroadcast()
         {
-            var messenger = new RealtimeMessenger();
-            await messenger.InitializeAsync($"remote-{SharedData.pcName}-{SharedData.siteID}");
+            try
+            {
+                var messenger = new RealtimeMessenger();
+                await messenger.InitializeAsync($"remote-{SharedData.pcName}-{SharedData.siteID}");
+            } catch (Exception ex)
+            {
+                Debug.WriteLine($"Realtime PC Messenger initialization error: {ex.Message}");
+            }
 
-            var siteMessager = new RealtimeMessenger();
-            await siteMessager.InitializeAsync($"site-{SharedData.siteID}");
+            try
+            {
+                var siteMessager = new RealtimeMessenger();
+                await siteMessager.InitializeAsync($"site-{SharedData.siteID}");
+            } catch (Exception ex)
+            {
+                Debug.WriteLine($"Realtime Site Messenger initialization error: {ex.Message}");
+            }
 
             _realTimeBroadCastTimer.Interval = 1000;
             _realTimeBroadCastTimer.Elapsed += async (s, e) => { };
