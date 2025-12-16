@@ -27,6 +27,8 @@ namespace PCMonitorClient
 
         private static string SUPABASE_URL;
 
+        public int currentSessionMinutes;
+
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
 
@@ -244,7 +246,7 @@ namespace PCMonitorClient
 
             using (HttpClient client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromSeconds(10);
+                client.Timeout = TimeSpan.FromSeconds(60);
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
                 var content = new StringContent(jsonLogData, Encoding.UTF8, "application/json");
 
@@ -393,7 +395,7 @@ namespace PCMonitorClient
             this.Left = screenWidth - this.Width - 100;
             this.Top = 100;
 
-            int sessionTime = SharedData.duration * 60;
+            int sessionTime = currentSessionMinutes * 60;
             PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             ComputerInfo ci = new ComputerInfo();
 
@@ -405,19 +407,21 @@ namespace PCMonitorClient
                 previousBytesReceived = (ulong)initialStats.BytesReceived;
             }
 
+            timer?.Stop();
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromSeconds(1);
             timer.Tick += async (s, e) =>
             {
                 // Session Time & Remain Time
+                int currentSessionTime = currentSessionMinutes * 60;
+
                 time++;
-                int remainTime = sessionTime - time;
-                this.sessionBox.Content = $"{time / 60 / 60:D2}:{time / 60 % 60:D2}:{time % 60:D2}";
-                this.remainBox.Content = $"{remainTime / 60 / 60:D2}:{remainTime / 60 % 60:D2}:{remainTime % 60:D2}";
+                int remainTime = currentSessionTime - time;
+
+                this.remainBox.Content = $"{remainTime / 3600:D2}:{remainTime / 60 % 60:D2}:{remainTime % 60:D2}";
 
                 // Idle Time
                 idleTime = IdleTimeHelper.GetIdleTime();
-                this.idleBox.Content = idleTime.ToString(@"mm\:ss");
 
                 // CPU
                 cpuCounter.NextValue();
@@ -478,20 +482,15 @@ namespace PCMonitorClient
                         Debug.WriteLine($"Network stats error: {ex.Message}");
                     }
                 }
-                cpuUsageBox.Content = $"{cpuUsage:F2}%";
-                ramUsageBox.Content = $"{usedMemoryGB:F1}/{totalMemoryGB:F1} GB ({ramUsage:F0}%)";
-                diskUsageBox.Content = $"{usedSpaceGB:F1}/{totalSizeGB:F1} GB ({diskUsage:F0}%)";
-                if ( SharedData.curCulture == "en" )
-                    netUsageBox.Content = $"Send     {deltaSent * 8 / 1024.0:F1} Kbps\nReceive {deltaReceived * 8 / 1024.0:F1} Kbps";
-                else
-                    netUsageBox.Content = $"Hantar   {deltaSent * 8 / 1024.0:F1} Kbps\nTerima  {deltaReceived * 8 / 1024.0:F1} Kbps";
-
-                if ( remainTime / 60 % 60 == 10 && remainTime % 60 == 0 )
+                Debug.WriteLine($"Session Minutes: {currentSessionMinutes} Session Time: {currentSessionTime}s, Remain time: {remainTime} in main window");
+                // Show alert for last 10 minutes session
+                if (remainTime == 600)
                 {
                     var alert = new AlertWindow ($"10 {Properties.Resources.timeAlert}");
                     alert.Show();
                 }
-                else if (remainTime / 60 % 60 == 5 && remainTime % 60 == 0)
+                // Show alert for last 5 minutes session
+                else if (remainTime == 300)
                 {
                     var alert = new AlertWindow($"5 {Properties.Resources.timeAlert}");
                     alert.Show();
@@ -506,20 +505,20 @@ namespace PCMonitorClient
                     CloseAllOtherApplications();
                 }
 
-                if (idleTime.Minutes == 20)
-                {
-                    var alert = new AlertWindow($"{Properties.Resources.idleAlert} 20m");
-                    alert.Show();
-                }
-                else if (idleTime.Minutes > 30)
-                {
-                    timer.Stop(); // Stop timer immediately
+                //if (idleTime.Minutes == 20)
+                //{
+                //    var alert = new AlertWindow($"{Properties.Resources.idleAlert} 20m");
+                //    alert.Show();
+                //}
+                //else if (idleTime.Minutes > 30)
+                //{
+                //    timer.Stop(); // Stop timer immediately
 
-                    Debug.WriteLine("Idle timeout - initiating automatic logout");
-                    await PerformLogoutAsync(); // Use centralized logout
+                //    Debug.WriteLine("Idle timeout - initiating automatic logout");
+                //    await PerformLogoutAsync(); // Use centralized logout
 
-                    CloseAllOtherApplications();
-                }              
+                //    CloseAllOtherApplications();
+                //}              
             };
             timer.Start();
         }
@@ -596,7 +595,7 @@ namespace PCMonitorClient
 
             using (HttpClient client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromSeconds(10); // Add timeout
+                client.Timeout = TimeSpan.FromSeconds(60); // Add timeout
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
                 var content = new StringContent(jsonLogData, Encoding.UTF8, "application/json");
 
@@ -633,7 +632,7 @@ namespace PCMonitorClient
 
             using (HttpClient client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromSeconds(10); // Add timeout
+                client.Timeout = TimeSpan.FromSeconds(60); // Add timeout
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
                 var content = new StringContent(jsonLogData, Encoding.UTF8, "application/json");
 
@@ -667,13 +666,8 @@ namespace PCMonitorClient
             previousBytesSent = 0;
             previousBytesReceived = 0;
 
-            sessionBox.Content = "00:00:00";
-            remainBox.Content = "00:00:00";
-            idleBox.Content = "00:00";
-            cpuUsageBox.Content = "0%";
-            ramUsageBox.Content = "0/0 GB (0%)";
-            diskUsageBox.Content = "0/0 GB (0%)";
-            netUsageBox.Content = "Send 0 Kbps\nReceive 0 Kbps";
+            int sessionTime = SharedData.duration * 60;
+            remainBox.Content = $"{sessionTime / 3600:D2}:{sessionTime / 60 % 60:D2}:{sessionTime % 60:D2}";
         }
 
         private double[] GetAllDrivesInfo()

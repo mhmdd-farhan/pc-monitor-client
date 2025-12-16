@@ -19,200 +19,190 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <!-- Kiri 70% -->
+            <!-- Left 70% -->
             <ColumnDefinition Width="7*"/>
-            <!-- Kanan 30% -->
+            <!-- Right 30% -->
             <ColumnDefinition Width="3*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Bagian kiri: background image -->
+        <!-- Left: background image -->
         <controls:ImageCarousel x:Name="SiteImageCarousel" 
                                 VerticalAlignment="Stretch"
                                 HorizontalAlignment="Stretch"/>
 
-        <!-- Bagian kanan: form register -->
+        <!-- Right: form register -->
         <Border Grid.Column="1" 
                 Background="White" 
                 Padding="20"
                 VerticalAlignment="Stretch">
-            <Viewbox Stretch="Uniform" 
-                     StretchDirection="DownOnly"
-                     VerticalAlignment="Center">
-                <StackPanel HorizontalAlignment="Center" 
-                            VerticalAlignment="Center" 
-                            Width="300">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                    <!-- Logo -->
-                    <Image Source="pack://application:,,,/Assets/nadi-madani-logo.png"
-                           Width="260"
-                           Stretch="Uniform"
-                           Margin="0,0,0,10"/>
+                <!-- Form Content -->
+                <ScrollViewer Grid.Row="0" 
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel HorizontalAlignment="Center" 
+                                VerticalAlignment="Top"
+                                Margin="20">
 
-                    <!-- Subtitle -->
-                    <TextBlock Text="Register Member" 
-                               FontSize="16" 
-                               FontWeight="SemiBold" 
-                               Foreground="#FF333333" 
-                               Margin="0,0,0,15"
-                               HorizontalAlignment="Center"/>
+                        <!-- Logo -->
+                        <Image Source="pack://application:,,,/Assets/nadi-madani-logo.png"
+                               MaxWidth="260"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10"/>
 
-                    <Label x:Name="labelFullName" Content="Full Name:" 
-                           FontSize="13" 
-                           Foreground="Black"
-                           FontWeight="Bold" 
-                           Padding="0,0,0,3"
-                           Width="260"/>
-                    <TextBox x:Name="textFullName" 
-                             Height="35" 
-                             FontSize="13"
-                             Margin="0,0,0,10"
-                             Width="260"/>
+                        <!-- Subtitle -->
+                        <TextBlock Text="Register Member" 
+                                   FontSize="16" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="#FF333333" 
+                                   Margin="0,0,0,15"
+                                   HorizontalAlignment="Center"/>
 
-                    <!-- Email -->
-                    <Label x:Name="labelEmail" Content="Email:" 
-                           FontSize="13" 
-                           Foreground="Black"
-                           FontWeight="Bold" 
-                           Padding="0,0,0,3"
-                           Width="260"/>
-                    <TextBox x:Name="textEmail" 
-                             Height="35" 
-                             FontSize="13"
-                             Margin="0,0,0,10"
-                             Width="260"/>
-                    
-                    <Label x:Name="labelGender" Content="Gender:" 
-                            FontSize="13" 
-                            Foreground="Black"
-                            FontWeight="Bold" 
-                            Padding="0,0,0,3"
-                            Width="260"/>
-                    <ComboBox x:Name="GenderComboBox" Width="260" Height="40" SelectedIndex="0" Margin="0,0,0,10">
-                        <ComboBoxItem Content="Male" Tag="1"/>
-                        <ComboBoxItem Content="Female" Tag="2"/>
-                    </ComboBox>
+                        <Label x:Name="labelFullName" Content="Full Name:" 
+                               FontSize="13" 
+                               Foreground="Black"
+                               FontWeight="Bold" 
+                               Padding="0,0,0,3"/>
+                        <TextBox x:Name="textFullName" 
+                                 Height="35" 
+                                 FontSize="13"
+                                 Margin="0,0,0,10"/>
 
-                    <!-- IC Number -->
-                    <Label x:Name="labelIcNumber" Content="IC Number:" 
-                           FontSize="13" 
-                           Foreground="Black"
-                           FontWeight="Bold" 
-                           Padding="0,0,0,3"
-                           Width="260"/>
-                    <TextBox x:Name="textIcNumber" 
-                             Height="35" 
-                             FontSize="13"
-                             Margin="0,0,0,10"
-                             Width="260"/>
+                        <!-- Email -->
+                        <Label x:Name="labelEmail" Content="Email:" 
+                               FontSize="13" 
+                               Foreground="Black"
+                               FontWeight="Bold" 
+                               Padding="0,0,0,3"/>
+                        <TextBox x:Name="textEmail" 
+                                 Height="35" 
+                                 FontSize="13"
+                                 Margin="0,0,0,10"/>
 
-                    <!-- Phone Number -->
-                    <Label x:Name="labelPhoneNumber" Content="Phone Number:" 
-                           FontSize="13" 
-                           Foreground="Black"
-                           FontWeight="Bold" 
-                           Padding="0,0,0,3"
-                           Width="260"/>
-                    <TextBox x:Name="textPhoneNumber" 
-                             Height="35" 
-                             FontSize="13"
-                             Margin="0,0,0,10"
-                             Width="260"/>
+                        <Label x:Name="labelGender" Content="Gender:" 
+                                FontSize="13" 
+                                Foreground="Black"
+                                FontWeight="Bold" 
+                                Padding="0,0,0,3"/>
+                        <ComboBox x:Name="GenderComboBox" 
+                                  Height="40" 
+                                  SelectedIndex="0" 
+                                  Margin="0,0,0,10">
+                            <ComboBoxItem Content="Male" Tag="1"/>
+                            <ComboBoxItem Content="Female" Tag="2"/>
+                        </ComboBox>
 
-                    <!-- Site Name -->
-                    <Label x:Name="labelSiteCode" Content="Site Code:" 
-                           FontSize="13" 
-                           Foreground="Black"
-                           FontWeight="Bold" 
-                           Padding="0,0,0,3"
-                           Width="260"/>
-                    <TextBox x:Name="textSiteCode" 
-                             Height="35" 
-                             FontSize="13"
-                             Margin="0,0,0,10"
-                             Width="260"/>
-                    
-                    <!-- Password -->
-                    <Label x:Name="labelPassword" Content="Password:" 
-                           FontSize="13" 
-                           Foreground="Black"
-                           FontWeight="Bold" 
-                           Padding="0,0,0,3"
-                           Width="260"/>
-                    <TextBox x:Name="textPassword" 
-                             Height="35" 
-                             FontSize="13"
-                             Margin="0,0,0,10"
-                             Width="260"/>
+                        <!-- IC Number -->
+                        <Label x:Name="labelIcNumber" Content="IC Number:" 
+                               FontSize="13" 
+                               Foreground="Black"
+                               FontWeight="Bold" 
+                               Padding="0,0,0,3"/>
+                        <TextBox x:Name="textIcNumber" 
+                                 Height="35" 
+                                 FontSize="13"
+                                 Margin="0,0,0,10"/>
 
-                    <!-- Check IC -->
-                    <Button x:Name="checkIcButton" 
-                            Height="40" 
-                            Content="Register" 
-                            Background="#FF007BFF" 
-                            Foreground="White" 
-                            FontSize="15" 
-                            FontWeight="SemiBold"
-                            BorderThickness="0"
-                            Cursor="Hand" 
-                            Margin="0,15,0,0"
-                            Width="260"
-                            Click="checkIcBtn_Click"/>
+                        <!-- Phone Number -->
+                        <Label x:Name="labelPhoneNumber" Content="Phone Number:" 
+                               FontSize="13" 
+                               Foreground="Black"
+                               FontWeight="Bold" 
+                               Padding="0,0,0,3"/>
+                        <TextBox x:Name="textPhoneNumber" 
+                                 Height="35" 
+                                 FontSize="13"
+                                 Margin="0,0,0,10"/>
 
-                    <!-- Register Button -->
-                    <Button x:Name="registerBtn" 
-                            Height="40" 
-                            Content="Register" 
-                            Background="#FF007BFF" 
-                            Foreground="White" 
-                            FontSize="15" 
-                            FontWeight="SemiBold"
-                            BorderThickness="0"
-                            Cursor="Hand" 
-                            Margin="0,15,0,0"
-                            Width="260"
-                            Click="registerBtn_Click"/>
-                    
-                    <Button x:Name="newRegisterBtn" 
-                            Height="40" 
-                            Content="Register" 
-                            Background="#FF007BFF" 
-                            Foreground="White" 
-                            FontSize="15" 
-                            FontWeight="SemiBold"
-                            BorderThickness="0"
-                            Cursor="Hand" 
-                            Margin="0,15,0,0"
-                            Width="260"
-                            Click="newRegisterBtn_Click"/>
-                    
+                        <!-- Password -->
+                        <Label x:Name="labelPassword" Content="Password:" 
+                               FontSize="13" 
+                               Foreground="Black"
+                               FontWeight="Bold" 
+                               Padding="0,0,0,3"/>
+                        <TextBox x:Name="textPassword" 
+                                 Height="35" 
+                                 FontSize="13"
+                                 Margin="0,0,0,10"/>
 
-                    <!-- Login Link -->
-                    <TextBlock HorizontalAlignment="Center" 
-                               Margin="0,12,0,0"
-                               FontSize="13">
-                        <Run Text="You already have an account? " 
-                             Foreground="#FF666666"/>
-                        <Hyperlink x:Name="loginLink"
-                                   Click="loginLink_Click"
-                                   Foreground="#FF007BFF"
-                                   TextDecorations="None">
-                            <Run Text="Login now" 
-                                 FontWeight="SemiBold"/>
-                        </Hyperlink>
-                    </TextBlock>
+                        <!-- Check IC -->
+                        <Button x:Name="checkIcButton" 
+                                Height="40" 
+                                Content="Register" 
+                                Background="#FF007BFF" 
+                                Foreground="White" 
+                                FontSize="15" 
+                                FontWeight="SemiBold"
+                                BorderThickness="0"
+                                Cursor="Hand" 
+                                Margin="0,15,0,0"
+                                Click="checkIcBtn_Click"/>
 
-                    <!-- Language Checkbox -->
-                    <CheckBox x:Name="langSelect" 
-                              Height="35"
-                              Content="Language" 
-                              FontSize="13" 
-                              Margin="0,12,0,0"
-                              HorizontalAlignment="Center"
-                              Click="langSelect_Click" 
-                              Style="{StaticResource CustomCheckBoxStyle}"/>
+                        <!-- Register Button -->
+                        <Button x:Name="registerBtn" 
+                                Height="40" 
+                                Content="Register" 
+                                Background="#FF007BFF" 
+                                Foreground="White" 
+                                FontSize="15" 
+                                FontWeight="SemiBold"
+                                BorderThickness="0"
+                                Cursor="Hand" 
+                                Margin="0,15,0,0"
+                                Click="registerBtn_Click"/>
 
+                        <Button x:Name="newRegisterBtn" 
+                                Height="40" 
+                                Content="Register" 
+                                Background="#FF007BFF" 
+                                Foreground="White" 
+                                FontSize="15" 
+                                FontWeight="SemiBold"
+                                BorderThickness="0"
+                                Cursor="Hand" 
+                                Margin="0,15,0,0"
+                                Click="newRegisterBtn_Click"/>
+
+                        <!-- Login Link -->
+                        <TextBlock HorizontalAlignment="Center" 
+                                   Margin="0,12,0,0"
+                                   FontSize="13">
+                            <Run Text="You already have an account? " 
+                                 Foreground="#FF666666"/>
+                            <Hyperlink x:Name="loginLink"
+                                       Click="loginLink_Click"
+                                       Foreground="#FF007BFF"
+                                       TextDecorations="None">
+                                <Run Text="Login now" 
+                                     FontWeight="SemiBold"/>
+                            </Hyperlink>
+                        </TextBlock>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Bottom Section -->
+                <StackPanel Grid.Row="1" 
+                            HorizontalAlignment="Center"
+                            Margin="0,12,0,12">
+
+
+                    <!-- Version -->
+                    <TextBlock x:Name="Version"  
+                               Text="2.2.11.0"   
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               Foreground="Black"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
                 </StackPanel>
-            </Viewbox>
+            </Grid>
         </Border>
     </Grid>
 </Window>

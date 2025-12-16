@@ -85,67 +85,83 @@
             <Border Grid.Column="1" 
                     Background="White" 
                     Padding="40">
-                <StackPanel HorizontalAlignment="Center" 
-                            VerticalAlignment="Top" 
-                            Margin="0,0,0,0"
-                            Width="300">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <!-- Logo / Title -->
-                    <Image Source="pack://application:,,,/Assets/nadi-madani-logo.png"
-                           Width="260"
-                           Stretch="Fill"/>
+                    <!-- Form Content -->
+                    <StackPanel Grid.Row="0"
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Top" 
+                                Margin="0,0,0,0">
 
-                    <!-- Subtitle -->
-                    <TextBlock Text="PC Registration" 
-                               FontSize="16" 
-                               FontWeight="SemiBold" 
-                               Foreground="#FF333333" 
-                               Margin="0,0,0,20"
+                        <!-- Logo / Title -->
+                        <Image Source="pack://application:,,,/Assets/nadi-madani-logo.png"
+                               MaxWidth="260"
+                               Stretch="Uniform"
                                HorizontalAlignment="Center"/>
 
-                    <!-- PC Name Label -->
-                    <Label x:Name="pcName"  
-                           Content="PC Name:"   
-                           FontSize="14" 
-                           FontWeight="Bold" 
-                           Foreground="Black"
-                           Width="260"/>
+                        <!-- Subtitle -->
+                        <TextBlock Text="PC Registration" 
+                                   FontSize="16" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="#FF333333" 
+                                   Margin="0,0,0,20"
+                                   HorizontalAlignment="Center"/>
 
-                    <!-- Input: PC Name -->
-                    <TextBox x:Name="pcNameBox" 
-                             Height="40" 
-                             FontSize="14"
-                             Margin="0,0,0,15"
-                             Width="260"/>
+                        <!-- PC Name Label -->
+                        <Label x:Name="pcName"  
+                               Content="PC Name:"   
+                               FontSize="14" 
+                               FontWeight="Bold" 
+                               Foreground="Black"/>
 
-                    <!-- Site Name Label -->
-                    <Label x:Name="refId"  
-                           Content="Ref ID MCMC:"   
-                           FontSize="14" 
-                           FontWeight="Bold"
-                           Foreground="Black"
-                           Width="260"/>
+                        <!-- Input: PC Name -->
+                        <TextBox x:Name="pcNameBox" 
+                                 Height="40" 
+                                 FontSize="14"
+                                 Margin="0,0,0,15"/>
 
-                    <!-- Input: Site Location -->
-                    <TextBox x:Name="refIdBox" 
-                             Height="40" 
-                             FontSize="14"
-                             Margin="0,0,0,15"
-                             Width="260"/>
+                        <!-- Site Name Label -->
+                        <Label x:Name="refId"  
+                               Content="Ref ID MCMC:"   
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               Foreground="Black"/>
 
-                    <!-- Register Button -->
-                    <Button x:Name="registerBtn" 
-                            Height="45" 
-                            Content="Register PC" 
-                            Background="#FF007BFF" 
-                            Foreground="White" 
-                            FontSize="16" 
-                            FontWeight="SemiBold"
-                            BorderThickness="0"
-                            Cursor="Hand"
-                            Margin="0,25,0,0"
-                            Click="registerBtn_Click"/>
-                </StackPanel>
+                        <!-- Input: Site Location -->
+                        <TextBox x:Name="refIdBox" 
+                                 Height="40" 
+                                 FontSize="14"
+                                 Margin="0,0,0,15"/>
+
+                        <!-- Register Button -->
+                        <Button x:Name="registerBtn" 
+                                Height="45" 
+                                Content="Register PC" 
+                                Background="#FF007BFF" 
+                                Foreground="White" 
+                                FontSize="16" 
+                                FontWeight="SemiBold"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Margin="0,25,0,0"
+                                Click="registerBtn_Click"/>
+                    </StackPanel>
+
+                    <!-- Version at Bottom -->
+                    <TextBlock Grid.Row="1"
+                               x:Name="Version"  
+                               Text="2.2.11.0"   
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               Foreground="Black"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Bottom"
+                               Margin="0,20,0,0"/>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

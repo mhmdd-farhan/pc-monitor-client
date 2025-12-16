@@ -90,7 +90,7 @@ namespace PCMonitorClient
                     {
                         if (_isShuttingDown || _isUpdating) return;
 
-                        var result = MessageBox.Show(
+                        var result = ShowTopMostMessageBox(
                             $"New version available!\n\n" +
                             $"Current version: {currentVersion}\n" +
                             $"Newest version: {latestVersion}\n\n" +
@@ -336,7 +336,7 @@ namespace PCMonitorClient
                     {
                         if (statusText != null && progressWindow != null && progressWindow.IsLoaded)
                         {
-                            statusText.Text = "Download complete! Starting installation...";
+                            statusText.Text = "Download complete!";
                             progressBar.Value = 100;
                         }
                     }
@@ -366,10 +366,38 @@ namespace PCMonitorClient
 
                 if (_isShuttingDown) return;
 
+                // Show warning message before installation
+                var warningResult = await Dispatcher.InvokeAsync(() =>
+                {
+                    return ShowTopMostMessageBox(
+                        "IMPORTANT NOTICE\n\n" +
+                        "Updating to the latest version will cause your PC to restart automatically.\n\n" +
+                        "After the restart, please wait for the application to open automatically.\n\n" +
+                        "Do you want to proceed with the update?",
+                        "Update Warning",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+                });
+
+                if (warningResult != MessageBoxResult.Yes)
+                {
+                    // User cancelled, delete downloaded file
+                    try
+                    {
+                        if (File.Exists(tempPath))
+                        {
+                            File.Delete(tempPath);
+                        }
+                    }
+                    catch { }
+                    _isUpdating = false;
+                    return;
+                }
+
                 // Set shutdown flag BEFORE starting installation
                 _isShuttingDown = true;
 
-                // Start installation directly without asking
+                // Start installation directly
                 if (tempPath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
                 {
                     await CreateAndRunUpdateScript(tempPath);
@@ -422,39 +450,64 @@ namespace PCMonitorClient
             {
                 string productCode = GetInstalledProductCode(APP_NAME);
                 string scriptPath = Path.Combine(Path.GetTempPath(), "update_pcmonitor.bat");
+                string appPath = "C:\\MyApps\\PCMonitorClient\\PCMonitorClient.exe";
 
                 var scriptContent = new StringBuilder();
                 scriptContent.AppendLine("@echo off");
-                scriptContent.AppendLine("echo Updating PC Monitor Client...");
+                scriptContent.AppendLine("echo ========================================");
+                scriptContent.AppendLine("echo PC Monitor Client Update Process");
+                scriptContent.AppendLine("echo ========================================");
                 scriptContent.AppendLine("echo.");
 
                 scriptContent.AppendLine("timeout /t 3 /nobreak > nul");
 
                 if (!string.IsNullOrEmpty(productCode))
                 {
-                    scriptContent.AppendLine("echo Uninstalling old version...");
+                    scriptContent.AppendLine("echo [1/5] Uninstalling old version...");
                     scriptContent.AppendLine($"msiexec.exe /x {productCode} /qn /norestart");
                     scriptContent.AppendLine("timeout /t 5 /nobreak > nul");
+                    scriptContent.AppendLine("echo Old version uninstalled successfully.");
+                    scriptContent.AppendLine("echo.");
                 }
 
-                scriptContent.AppendLine("echo Removing old files...");
+                scriptContent.AppendLine("echo [2/5] Removing old files...");
                 scriptContent.AppendLine("if exist \"C:\\MyApps\\PCMonitorClient\" (");
                 scriptContent.AppendLine("    rd /s /q \"C:\\MyApps\\PCMonitorClient\"");
-                scriptContent.AppendLine("    echo Old files removed.");
+                scriptContent.AppendLine("    echo Old files removed successfully.");
                 scriptContent.AppendLine(") else (");
                 scriptContent.AppendLine("    echo No old files found.");
                 scriptContent.AppendLine(")");
                 scriptContent.AppendLine("timeout /t 2 /nobreak > nul");
+                scriptContent.AppendLine("echo.");
 
-                scriptContent.AppendLine("echo Installing new version...");
+                scriptContent.AppendLine("echo [3/5] Installing new version...");
                 scriptContent.AppendLine($"msiexec.exe /i \"{installerPath}\" /qb /norestart");
-                scriptContent.AppendLine("timeout /t 5 /nobreak > nul");
+                scriptContent.AppendLine("timeout /t 8 /nobreak > nul");
+                scriptContent.AppendLine("echo New version installed successfully.");
+                scriptContent.AppendLine("echo.");
 
-                scriptContent.AppendLine("echo Cleaning up...");
+                scriptContent.AppendLine("echo [4/5] Cleaning up temporary files...");
                 scriptContent.AppendLine($"del /f /q \"{installerPath}\"");
-                scriptContent.AppendLine($"del /f /q \"%~f0\"");
+                scriptContent.AppendLine("echo Cleanup complete.");
+                scriptContent.AppendLine("echo.");
 
-                scriptContent.AppendLine("echo Update complete!");
+                scriptContent.AppendLine("echo [5/5] Restarting PC...");
+                scriptContent.AppendLine("echo Your PC will restart in 5 seconds...");
+                scriptContent.AppendLine("timeout /t 5 /nobreak");
+                scriptContent.AppendLine("echo.");
+
+                // Add application to startup before restart
+                scriptContent.AppendLine("echo Adding application to startup...");
+                scriptContent.AppendLine($"reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"PCMonitorClient\" /t REG_SZ /d \"{appPath}\" /f");
+                scriptContent.AppendLine("echo.");
+
+                // Restart PC
+                scriptContent.AppendLine("echo Restarting now...");
+                scriptContent.AppendLine("shutdown /r /t 0 /f");
+                scriptContent.AppendLine("echo.");
+
+                // Delete script (this line might not execute due to restart)
+                scriptContent.AppendLine($"del /f /q \"%~f0\"");
                 scriptContent.AppendLine("exit");
 
                 await File.WriteAllTextAsync(scriptPath, scriptContent.ToString());
@@ -574,6 +627,33 @@ namespace PCMonitorClient
             }
 
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        private MessageBoxResult ShowTopMostMessageBox(string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
+        {
+            // Create a temporary invisible window to serve as the owner
+            var ownerWindow = new Window
+            {
+                Width = 0,
+                Height = 0,
+                Left = -10000,
+                Top = -10000,
+                WindowStyle = WindowStyle.None,
+                ShowInTaskbar = false,
+                ShowActivated = false,
+                Topmost = true
+            };
+
+            ownerWindow.Show();
+            ownerWindow.Activate();
+
+            // Show MessageBox with the owner window
+            var result = MessageBox.Show(ownerWindow, messageBoxText, caption, button, icon);
+
+            // Close and cleanup the owner window
+            ownerWindow.Close();
+
+            return result;
         }
 
         protected override void OnExit(ExitEventArgs e)

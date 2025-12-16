@@ -5,30 +5,33 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PCMonitorClient"
         mc:Ignorable="d" Background="#BBF0F0F0"
-        Title="Cilent App" Width="210" Height="180" ShowInTaskbar="True" Topmost="True" Closing="Window_Closing" ResizeMode="NoResize" Loaded="Window_Loaded" WindowStyle="None" AllowsTransparency="True" MouseLeftButtonDown="Window_MouseLeftButtonDown" MinWidth="213" MinHeight="128" SizeToContent="WidthAndHeight">
-    <Grid>
+        Title="Cilent App" Width="210" Height="130" ShowInTaskbar="True" Topmost="True" Closing="Window_Closing" ResizeMode="NoResize" Loaded="Window_Loaded" WindowStyle="None" AllowsTransparency="True" MouseLeftButtonDown="Window_MouseLeftButtonDown" MinWidth="213" MinHeight="110" SizeToContent="WidthAndHeight">
+    <Grid Margin="5">
         <!-- Define columns -->
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <!-- Define rows -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="16"/>
-            <RowDefinition Height="16"/>
-            <RowDefinition Height="16"/>
-            <RowDefinition Height="16"/>
-            <RowDefinition Height="16"/>
-            <RowDefinition Height="16"/>
+            <!--<RowDefinition Height="16"/>-->
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <!--<RowDefinition Height="16"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="16"/>-->
+            <!--<RowDefinition Height="Auto"/>-->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Label Name="sessionLabel" Content="Session Time:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"/>
-        <Label x:Name="sessionBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="0" Grid.Column="1"/>
-        <Label Name="remainLabel" Content="Remain Time:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" Grid.Column="0"/>
-        <Label x:Name="remainBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" Grid.Column="1"/>
-        <Label Name="idleLabel" Content="Idle Time:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="0"/>
+        <!--<Label Name="sessionLabel" Content="Session Time:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"/>
+        <Label x:Name="sessionBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="0" Grid.Column="1"/>-->
+        <Label Name="remainLabel" Content="Remain Time:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="0" Grid.Column="0"/>
+        <Label x:Name="remainBox" Content="" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="0" Grid.Column="1"/>
+        <Label Name="versionLabel" Content="App Version:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="1" Grid.Column="0"/>
+        <Label x:Name="versionBox" Content="2.2.11.0" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="1" Grid.Column="1"/>
+        <!--<Label Name="idleLabel" Content="Idle Time:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="0"/>
         <Label x:Name="idleBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="1"/>
         <Label Name="cpuLabel" Content="CPU Usage:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="3" Grid.Column="0"/>
         <Label x:Name="cpuUsageBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="3" Grid.Column="1"/>
@@ -37,8 +40,8 @@
         <Label Name="diskLabel" Content="Disk Usage:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="5" Grid.Column="0"/>
         <Label x:Name="diskUsageBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="5" Grid.Column="1"/>
         <Label Name="netLabel" Content="Net Usage:" Padding="5 0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="6" Grid.Column="0"/>
-        <Label x:Name="netUsageBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="6" Grid.Column="1"/>
-        <Button x:Name="minimizeBtn" Content="Minimize" Width="200" Height="25" Cursor="Hand" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="7" Click="minimizeButton_Click" RenderTransformOrigin="0.488,0.05" Margin="8,5,0,3"/>
-        <Button x:Name="logoutButton" Content="Logout" Width="200" Height="25" Cursor="Hand" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="8" Click="logoutButton_Click" RenderTransformOrigin="0.488,0.05" Margin="8,5,0,5"/>
+        <Label x:Name="netUsageBox" Content="" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="6" Grid.Column="1"/>-->
+        <Button x:Name="logoutButton" Content="Logout" Width="200" Height="30" Cursor="Hand" HorizontalAlignment="Center" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2" Click="logoutButton_Click" Margin="0,20,0,0"/>
+        <Button x:Name="minimizeBtn" Content="Minimize" Width="200" Height="30" Cursor="Hand" HorizontalAlignment="Center" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3" Click="minimizeButton_Click" Margin="0,5,0,0"/>
     </Grid>
 </Window>

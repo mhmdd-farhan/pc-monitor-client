@@ -12,6 +12,7 @@
 
         public static string pcName = "";
         public static int siteID = 0;
+        public static string refIDMCMC = "";
         public static string siteName = "";
 
         public static string curCulture = "en";

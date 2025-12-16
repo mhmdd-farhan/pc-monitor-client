@@ -300,11 +300,29 @@ namespace PCMonitorClient
                 {
                     Debug.WriteLine("Setting Manual duration..");
                     SharedData.duration = 60; // Default to 60 minutes if not set
+                    _mainWindow.currentSessionMinutes = SharedData.duration;
                 }
 
                 // Set flag FIRST to prevent re-entry
                 SharedData.startFlag = 2;
                 SharedData.logoutFlag = false;
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    var registerDialogs = Application.Current.Windows.OfType<RegisterDialog>().ToList();
+                    foreach (var regDialog in registerDialogs)
+                    {
+                        Debug.WriteLine("Closing RegisterDialog before login");
+                        try
+                        {
+                            regDialog.Close();
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error closing RegisterDialog: {ex.Message}");
+                        }
+                    }
+                });
 
                 // Dispose keyboard hook
                 await Dispatcher.InvokeAsync(() =>
@@ -512,7 +530,27 @@ namespace PCMonitorClient
                         try
                         {
                             var jsonDoc = JsonDocument.Parse(responseBody);
-                            if (jsonDoc.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                            if (jsonDoc.RootElement.TryGetProperty("isMemberAccountActive", out JsonElement errorMemberAccountNotFound))
+                            {
+                                bool isActive = errorMemberAccountNotFound.GetBoolean();
+                                if (!isActive)
+                                {
+                                    MessageBox.Show($"Member account is not active. Please proceed to activate");
+                                    NavigateRegisterPage();
+                                    return;
+                                }
+                            }
+                            else if (jsonDoc.RootElement.TryGetProperty("isMemberActive", out JsonElement errorMemberNotFound))
+                            {
+                                bool isActive = errorMemberNotFound.GetBoolean();
+                                if (!isActive)
+                                {
+                                    MessageBox.Show($"Member not found. Please proceed to register");
+                                    NavigateRegisterPage();
+                                    return;
+                                }
+                            }
+                            else if (jsonDoc.RootElement.TryGetProperty("error", out JsonElement errorElement))
                             {
                                 string errorMessage = errorElement.GetString() ?? "Unknown error occurred.";
                                 MessageBox.Show($"{errorMessage}");
@@ -542,6 +580,7 @@ namespace PCMonitorClient
                             DateTime curTime = DateTime.Now;
 
                             SharedData.duration = (int)endTime.Subtract(curTime).TotalMinutes;
+                            _mainWindow.currentSessionMinutes = SharedData.duration;
                         }
                     }
                     catch (Exception ex)
@@ -553,6 +592,13 @@ namespace PCMonitorClient
                     textMemberShipId.Clear();
                     textIcNumber.Clear();
                     textSitePassword.Clear();
+
+                    // Make select IC is default visible
+                    comboSelect.SelectedItem = optionIcNumber;
+                    textIcNumber.Visibility = Visibility.Visible;
+                    // Hide others
+                    textMemberShipId.Visibility = Visibility.Collapsed;
+                    textSitePassword.Visibility = Visibility.Collapsed;
 
                     Debug.WriteLine($"=== LOGIN SUCCESS - Duration: {SharedData.duration} minutes ===");
 
@@ -706,18 +752,6 @@ namespace PCMonitorClient
             _realTimeBroadCastTimer.Elapsed += async (s, e) => { };
             _realTimeBroadCastTimer.Start();
         }
-        private void langSelect_Click(object sender, RoutedEventArgs e)
-        {
-            if (langSelect.IsChecked == true)
-            {
-                SharedData.curCulture = "ms-MY";
-            }
-            else
-            {
-                SharedData.curCulture = "en";
-            }
-            SetCulture(SharedData.curCulture);
-        }
         private void SetCulture(string cultureCode)
         {
             CultureInfo culture = new CultureInfo(cultureCode);
@@ -729,18 +763,13 @@ namespace PCMonitorClient
         {
             labelMemberShipId.Content = Properties.Resources.labelMembershipId;
             loginBtn.Content = Properties.Resources.loginBtn;
-            langSelect.Content = Properties.Resources.langSelect;
-            textMemberShipId.Visibility = Visibility.Visible;
-            textIcNumber.Visibility = Visibility.Collapsed;
+            // Display IC as default
+            textIcNumber.Visibility = Visibility.Visible;
+            // Hide others
+            textMemberShipId.Visibility = Visibility.Collapsed;
             textSitePassword.Visibility = Visibility.Collapsed;
 
-            _mainWindow.sessionLabel.Content = Properties.Resources.sessionLabel;
             _mainWindow.remainLabel.Content = Properties.Resources.remainLabel;
-            _mainWindow.idleLabel.Content = Properties.Resources.idleLabel;
-            _mainWindow.cpuLabel.Content = Properties.Resources.cpuLabel;
-            _mainWindow.ramLabel.Content = Properties.Resources.ramLabel;
-            _mainWindow.diskLabel.Content = Properties.Resources.diskLabel;
-            _mainWindow.netLabel.Content = Properties.Resources.netLabel;
         }
 
         public static string DecryptStringFromBytes_Aes(byte[] cipherText, byte[] Key, byte[] IV)
@@ -796,15 +825,108 @@ namespace PCMonitorClient
 
         private void RegisterLink_Click(object sender, RoutedEventArgs e)
         {
+            NavigateRegisterPage();
+        }
 
-            _keyboardHook?.Dispose();
-            _keyboardHook = null;
+        private void NavigateRegisterPage()
+        {
+            // clear all input value first
+            textMemberShipId.Clear();
+            textIcNumber.Clear();
+            textSitePassword.Clear();
+            // Make select IC is default visible
+            comboSelect.SelectedItem = optionIcNumber;
+            textIcNumber.Visibility = Visibility.Visible;
+            // Hide others
+            textMemberShipId.Visibility = Visibility.Collapsed;
+            textSitePassword.Visibility = Visibility.Collapsed;
+            
 
-            _ = Task.Run(async () => await CleanupConnection());
+            // Dispose keyboard hook
+            try
+            {
+                _keyboardHook?.Dispose();
+                _keyboardHook = null;
+                Debug.WriteLine("Keyboard hook disposed");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error disposing keyboard hook: {ex.Message}");
+            }
 
-            RegisterDialog registerDialog = new RegisterDialog();
-            registerDialog.Show();
-            this.Hide();
+            // Cleanup WebSocket connection
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await CleanupConnection();
+                    Debug.WriteLine("Connection cleanup completed");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error in CleanupConnection: {ex.Message}");
+                }
+            });
+
+            // CRITICAL FIX: Properly close ALL existing RegisterDialog instances
+            var existingRegisterDialogs = Application.Current.Windows
+                .OfType<RegisterDialog>()
+                .ToList();
+
+            if (existingRegisterDialogs.Any())
+            {
+                Debug.WriteLine($"Found {existingRegisterDialogs.Count} existing RegisterDialog(s), closing them...");
+
+                foreach (var dialog in existingRegisterDialogs)
+                {
+                    try
+                    {
+                        // Force close without asking
+                        dialog.Closing -= null;
+                        dialog.Close();
+                        Debug.WriteLine("Closed existing RegisterDialog");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error closing RegisterDialog: {ex.Message}");
+                    }
+                }
+
+                // Give time for proper cleanup
+                System.Threading.Thread.Sleep(200);
+            }
+
+            // Force garbage collection to ensure old dialogs are destroyed
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            // Use Dispatcher to ensure UI thread operations are safe
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    // Create new RegisterDialog instance
+                    Debug.WriteLine("Creating new RegisterDialog");
+                    RegisterDialog registerDialog = new RegisterDialog();
+
+                    // Show the new dialog
+                    registerDialog.Show();
+                    registerDialog.Activate();
+                    registerDialog.Focus();
+
+                    Debug.WriteLine("RegisterDialog shown successfully");
+
+                    // Hide LoginDialog
+                    this.Hide();
+                    Debug.WriteLine("LoginDialog hidden");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error showing RegisterDialog: {ex.Message}");
+                    MessageBox.Show($"Error opening registration dialog: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Normal);
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)
@@ -850,6 +972,13 @@ namespace PCMonitorClient
                 _connectionLock?.Dispose();
                 _initializationLock?.Dispose();
                 _cancellationTokenSource?.Dispose();
+
+                var orphanedRegisterDialog = Application.Current.Windows.OfType<RegisterDialog>().FirstOrDefault();
+                if (orphanedRegisterDialog != null)
+                {
+                    Debug.WriteLine("Cleaning up orphaned RegisterDialog");
+                    orphanedRegisterDialog.Close();
+                }
             }
             catch (Exception ex)
             {

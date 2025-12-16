@@ -32,97 +32,107 @@
         <Border Grid.Column="1" 
                 Background="White" 
                 Padding="40">
-            <StackPanel HorizontalAlignment="Center" 
-                        VerticalAlignment="Top" 
-                        Margin="0,0,0,0"
-                        Width="300">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <!-- Judul / Welcome -->
-                <Image  Source="pack://application:,,,/Assets/nadi-madani-logo.png"
-                        Width="260"
-                        Stretch="Fill"/>
+                <!-- Form Content -->
+                <StackPanel Grid.Row="0"
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Top" 
+                            Margin="0,0,0,0">
 
-                <!-- Subtitle -->
-                <TextBlock Text="Login" 
-                    FontSize="16" 
-                    FontWeight="SemiBold" 
-                    Foreground="#FF333333" 
-                    Margin="0,0,0,20"
-                    HorizontalAlignment="Center"/>
+                    <!-- Judul / Welcome -->
+                    <Image  Source="pack://application:,,,/Assets/nadi-madani-logo.png"
+                            MaxWidth="260"
+                            Stretch="Uniform"
+                            HorizontalAlignment="Center"/>
 
-                <!-- Membership ID -->
-                <Label x:Name="labelMemberShipId" 
-                       Content="Membership ID or IC Number:" 
-                       FontSize="14" 
-                       Foreground="Black"
-                       FontWeight="Bold" 
-                       Width="257"/>
-                <ComboBox x:Name="comboSelect" 
-                          SelectedIndex="0" 
-                          Width="260"
-                          Height="40"
-                          FontSize="14"
-                          SelectionChanged="comboSelect_SelectionChanged">
-                    <ComboBoxItem Content="Membership ID" x:Name="optionMemberShipId" 
-                                  Height="40" FontSize="14" Width="260"/>
-                    <ComboBoxItem Content="IC Number" x:Name="optionIcNumber" 
-                                  Height="40" FontSize="14" Width="260"/>
-                    <ComboBoxItem Content="Site PC Password" x:Name="optionSitePassword" 
-                                  Height="40" FontSize="14" Width="260"/>
-                </ComboBox>
-                <TextBox x:Name="textMemberShipId" 
-                         Height="40" 
-                         FontSize="14"
-                         Margin="0,0,0,15"
-                         Width="260"/>
-                <TextBox x:Name="textIcNumber" 
-                        Height="40" 
-                        FontSize="14"
-                        Margin="0,0,0,15"
-                        Width="260"/>
-                <PasswordBox x:Name="textSitePassword"
-                        Height="40" 
-                        FontSize="14"
-                        Margin="0,0,0,15"
-                        Width="260"/>
-
-                <!-- Login Button -->
-                <Button x:Name="loginBtn" 
-                        Height="45" 
-                        Content="Login" 
-                        Background="#FF007BFF" 
-                        Foreground="White" 
+                    <!-- Subtitle -->
+                    <TextBlock Text="Login" 
                         FontSize="16" 
-                        FontWeight="SemiBold"
-                        BorderThickness="0"
-                        Cursor="Hand" 
-                        Margin="0,25,0,0"
-                        Click="loginBtn_Click"/>
+                        FontWeight="SemiBold" 
+                        Foreground="#FF333333" 
+                        Margin="0,0,0,20"
+                        HorizontalAlignment="Center"/>
 
-                <TextBlock HorizontalAlignment="Center" 
-                               Margin="0,20,0,0"
-                               FontSize="14">
-                        <Run Text="You don't have an account? " 
-                             Foreground="#FF666666"/>
-                        <Hyperlink x:Name="registerLink"
-                                   Click="RegisterLink_Click"
-                                   Foreground="#FF007BFF"
-                                   TextDecorations="None">
-                            <Run Text="Register now" 
-                                 FontWeight="SemiBold"/>
-                        </Hyperlink>
-                </TextBlock>
+                    <!-- Membership ID -->
+                    <Label x:Name="labelMemberShipId" 
+                           Content="Membership ID or IC Number:" 
+                           FontSize="14" 
+                           Foreground="Black"
+                           FontWeight="Bold"/>
+                    <ComboBox x:Name="comboSelect" 
+                              SelectedIndex="0" 
+                              Height="40"
+                              FontSize="14"
+                              SelectionChanged="comboSelect_SelectionChanged">
+                        <ComboBoxItem Content="IC Number" x:Name="optionIcNumber" 
+                                      Height="40" FontSize="14"/>
+                        <ComboBoxItem Content="Membership ID" x:Name="optionMemberShipId" 
+                                      Height="40" FontSize="14"/>
+                        <ComboBoxItem Content="Site PC Password" x:Name="optionSitePassword" 
+                                      Height="40" FontSize="14"/>
+                    </ComboBox>
+                    <TextBox x:Name="textMemberShipId" 
+                             Height="40" 
+                             FontSize="14"
+                             Margin="0,0,0,15"/>
+                    <TextBox x:Name="textIcNumber" 
+                            Height="40" 
+                            FontSize="14"
+                            Margin="0,0,0,15"/>
+                    <PasswordBox x:Name="textSitePassword"
+                            Height="40" 
+                            FontSize="14"
+                            Margin="0,0,0,15"/>
 
-                <!-- Language Checkbox -->
-                <CheckBox x:Name="langSelect" 
-                          Height="40"
-                          Content="Language" 
-                          FontSize="14" 
-                          Margin="0,20,0,0"
-                          Click="langSelect_Click" 
-                          Style="{StaticResource CustomCheckBoxStyle}" Width="169"/>
+                    <!-- Login Button -->
+                    <Button x:Name="loginBtn" 
+                            Height="45" 
+                            Content="Login" 
+                            Background="#FF007BFF" 
+                            Foreground="White" 
+                            FontSize="16" 
+                            FontWeight="SemiBold"
+                            BorderThickness="0"
+                            Cursor="Hand" 
+                            Margin="0,25,0,0"
+                            Click="loginBtn_Click"/>
 
-            </StackPanel>
+                    <TextBlock HorizontalAlignment="Center" 
+                                   Margin="0,20,0,0"
+                                   FontSize="14">
+                            <Run Text="You don't have an account? " 
+                                 Foreground="#FF666666"/>
+                            <Hyperlink x:Name="registerLink"
+                                       Click="RegisterLink_Click"
+                                       Foreground="#FF007BFF"
+                                       TextDecorations="None">
+                                <Run Text="Register now" 
+                                     FontWeight="SemiBold"/>
+                            </Hyperlink>
+                    </TextBlock>
+
+                </StackPanel>
+
+                <!-- Bottom Section -->
+                <StackPanel Grid.Row="1" 
+                            HorizontalAlignment="Center"
+                            Margin="0,20,0,0">
+
+                    <!-- Version -->
+                    <TextBlock x:Name="Version"
+                               Text="2.2.11.0"  
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="Black"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

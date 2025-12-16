@@ -1,5 +1,5 @@
 ﻿PCMonitorClient
-1.0.7
+2.2.11.0
 
 winexe
 C#
@@ -13,7 +13,7 @@ C:\Users\fmuh8\Source\Repos\PCMonitorClient\PCMonitorClient\App.xaml
 61300047365
 1-783576874
 16-2146509464
-2501226531348
+250-1808604568
 AlertWindow.xaml;ImageCarousel.xaml;LoginDialog.xaml;MainWindow.xaml;Register.xaml;RegisterDialog.xaml;
 
 False

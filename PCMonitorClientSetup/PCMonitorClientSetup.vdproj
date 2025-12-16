@@ -15,6 +15,12 @@
     {
         "Entry"
         {
+        "MsmKey" = "8:_1C96AAED2FD842158CF1076EE233C3D8"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_22C7F8527353468781654D3612C1B2F4"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -22,12 +28,6 @@
         "Entry"
         {
         "MsmKey" = "8:_24E8AD9EC591454D835080214FFED285"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_33ACA0276E6A456D9229666E7D5C59CD"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -169,17 +169,17 @@
     {
         "CustomAction"
         {
-            "{4AA51A2D-7D85-4A59-BA75-B0809FC8B380}:_68BAF6434696427B9ADFEB8033BB06AF"
+            "{4AA51A2D-7D85-4A59-BA75-B0809FC8B380}:_401E71D5ED5F44B9AD2EDBA78941CF85"
             {
             "Name" = "8:DeleteSettings.js"
             "Condition" = "8:"
-            "Object" = "8:_33ACA0276E6A456D9229666E7D5C59CD"
+            "Object" = "8:_1C96AAED2FD842158CF1076EE233C3D8"
             "FileType" = "3:3"
             "InstallAction" = "3:4"
             "Arguments" = "8:"
             "EntryPoint" = "8:"
             "Sequence" = "3:1"
-            "Identifier" = "8:_0C50DE83_9911_4398_AB5D_97EF609EEDE6"
+            "Identifier" = "8:_BC6BC4F7_28EF_448B_81E2_D63F78DA3991"
             "InstallerClass" = "11:FALSE"
             "CustomActionData" = "8:"
             }
@@ -208,6 +208,26 @@
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_1C96AAED2FD842158CF1076EE233C3D8"
+            {
+            "SourcePath" = "8:..\\PCMonitorClient\\Assets\\DeleteSettings.js"
+            "TargetName" = "8:DeleteSettings.js"
+            "Tag" = "8:"
+            "Folder" = "8:_1AB52BB1F66C4395B80D487873E99801"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_22C7F8527353468781654D3612C1B2F4"
             {
             "SourcePath" = "8:..\\PCMonitorClient\\bin\\Debug\\net8.0-windows10.0.17763.0\\ffmpeg-bin\\ffplay.exe"
@@ -234,26 +254,6 @@
             "TargetName" = "8:avdevice-61.dll"
             "Tag" = "8:"
             "Folder" = "8:_562F31AC1D754D04A197E285848C65D8"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_33ACA0276E6A456D9229666E7D5C59CD"
-            {
-            "SourcePath" = "8:..\\..\\..\\..\\Downloads\\DeleteSettings.js"
-            "TargetName" = "8:DeleteSettings.js"
-            "Tag" = "8:"
-            "Folder" = "8:_1AB52BB1F66C4395B80D487873E99801"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"

@@ -47,6 +47,7 @@ namespace PCMonitorClient
                 SharedData.pcName = data.pc_name;
                 SharedData.siteID = data.site_id;
                 SharedData.siteName = data.site_name;
+                SharedData.refIDMCMC = data.refid_mcmc;
             }
             catch (Exception ex)
             {
@@ -98,7 +99,6 @@ namespace PCMonitorClient
             labelEmail.Visibility = Visibility.Collapsed;
             labelPassword.Visibility = Visibility.Collapsed;
             labelPhoneNumber.Visibility = Visibility.Collapsed;
-            labelSiteCode.Visibility = Visibility.Collapsed;
             labelFullName.Visibility = Visibility.Collapsed;
             labelGender.Visibility = Visibility.Collapsed;
 
@@ -106,15 +106,12 @@ namespace PCMonitorClient
             textEmail.Visibility = Visibility.Collapsed;
             textPassword.Visibility = Visibility.Collapsed;
             textPhoneNumber.Visibility = Visibility.Collapsed;
-            textSiteCode.Visibility = Visibility.Collapsed;
             textFullName.Visibility = Visibility.Collapsed;
             GenderComboBox.Visibility = Visibility.Collapsed;
 
             // Hide button except ic Check
             registerBtn.Visibility = Visibility.Collapsed;
             newRegisterBtn.Visibility = Visibility.Collapsed;
-
-            langSelect.Content = Properties.Resources.langSelect;
         }
 
         private async void checkIcBtn_Click(object sender, RoutedEventArgs e)
@@ -149,11 +146,46 @@ namespace PCMonitorClient
                     try
                     {
                         HttpResponseMessage response = await client.PostAsync(register_member_url, content);
-                        response.EnsureSuccessStatusCode();
+                        
                         var responseBody = await response.Content.ReadAsStringAsync();
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            try
+                            {
+                                var jsonDocChecker = JsonDocument.Parse(responseBody);
+                                if (jsonDocChecker.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                                {
+                                    string errorMessage = errorElement.GetString() ?? "Unknown error occurred.";
+                                    MessageBox.Show($"{errorMessage}");
+                                }
+                                else
+                                {
+                                    MessageBox.Show($"{responseBody}");
+                                }
+                            }
+                            catch
+                            {
+                                MessageBox.Show($"Error: {responseBody}");
+                            }
+                            checkIcButton.IsEnabled = true;
+                            return;
+                        }
                         try
                         {
                             var jsonDoc = JsonDocument.Parse(responseBody);
+
+                            if (jsonDoc.RootElement.TryGetProperty("isAccountActive", out JsonElement accountActive))
+                            {
+                                bool isMemberAccountActive = accountActive.GetBoolean();
+
+                                if (isMemberAccountActive)
+                                {
+                                    MessageBox.Show("Your account is already active, Please login.");
+                                    checkIcButton.IsEnabled = true;
+                                    return;
+                                }
+                            }
+
                             if (jsonDoc.RootElement.TryGetProperty("isMemberExist", out JsonElement isMemberExist))
                             {
                                 bool memberExist = isMemberExist.GetBoolean();
@@ -168,8 +200,6 @@ namespace PCMonitorClient
                                     labelGender.Visibility = Visibility.Collapsed;
                                     GenderComboBox.Visibility = Visibility.Collapsed;
                                     checkIcButton.Visibility = Visibility.Collapsed;
-                                    labelSiteCode.Visibility = Visibility.Collapsed;
-                                    textSiteCode.Visibility = Visibility.Collapsed;
 
                                     // Show the other
                                     labelEmail.Visibility = Visibility.Visible;
@@ -194,8 +224,6 @@ namespace PCMonitorClient
                                     textPassword.Visibility = Visibility.Visible;
                                     labelPhoneNumber.Visibility = Visibility.Visible;
                                     textPhoneNumber.Visibility = Visibility.Visible;
-                                    labelSiteCode.Visibility = Visibility.Visible;
-                                    textSiteCode.Visibility = Visibility.Visible;
                                     labelFullName.Visibility = Visibility.Visible;
                                     textFullName.Visibility = Visibility.Visible;
                                     labelGender.Visibility = Visibility.Visible;
@@ -204,9 +232,9 @@ namespace PCMonitorClient
                                 }
                             }
 
-                            if (jsonDoc.RootElement.TryGetProperty("hasEmail", out JsonElement hasEmail))
+                            if (jsonDoc.RootElement.TryGetProperty("hasEmail", out JsonElement hasEmailAdress))
                             {
-                                bool isMemberHasEmail = hasEmail.GetBoolean();
+                                bool isMemberHasEmail = hasEmailAdress.GetBoolean();
 
                                 if (isMemberHasEmail)
                                 {
@@ -215,9 +243,9 @@ namespace PCMonitorClient
                                 }
                             }
 
-                            if (jsonDoc.RootElement.TryGetProperty("hasMobileNo", out JsonElement hasMobileNo))
+                            if (jsonDoc.RootElement.TryGetProperty("hasMobileNo", out JsonElement hasMobileNumber))
                             {
-                                bool isMemberHasMobileNo = hasMobileNo.GetBoolean();
+                                bool isMemberHasMobileNo = hasMobileNumber.GetBoolean();
 
                                 if (isMemberHasMobileNo)
                                 {
@@ -225,6 +253,7 @@ namespace PCMonitorClient
                                     textPhoneNumber.Visibility = Visibility.Collapsed;
                                 }
                             }
+
                         }
                         catch (Exception ex)
                         {
@@ -275,12 +304,6 @@ namespace PCMonitorClient
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(textSiteCode.Text))
-            {
-                MessageBox.Show("Please enter your site name.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             if (string.IsNullOrWhiteSpace(textFullName.Text))
             {
                 MessageBox.Show("Please enter your full name.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -304,7 +327,7 @@ namespace PCMonitorClient
                     password = textPassword.Text,
                     ic_no = textIcNumber.Text,
                     phone_no = textPhoneNumber.Text,
-                    site_code = textSiteCode.Text,
+                    refid_mcmc = SharedData.refIDMCMC,
                     gender = genderValue,
                     full_name = textFullName.Text
                 };
@@ -348,10 +371,12 @@ namespace PCMonitorClient
                         textPassword.Clear();
                         textIcNumber.Clear();
                         textPhoneNumber.Clear();
-                        textSiteCode.Clear();
                         textFullName.Clear();
 
                         MessageBox.Show("Registration success, You can login now.");
+
+                        await Task.Delay(500);
+                        NavigateToLogin();
 
                     }
                     catch (Exception hre)
@@ -445,6 +470,9 @@ namespace PCMonitorClient
 
                         MessageBox.Show("Registration success, You can login now.");
 
+                        await Task.Delay(500);
+                        NavigateToLogin();
+
                     }
                     catch (Exception hre)
                     {
@@ -463,6 +491,11 @@ namespace PCMonitorClient
         }
 
         private void loginLink_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToLogin();
+        }
+
+        private void NavigateToLogin()
         {
             if (_isNavigating)
             {
@@ -541,26 +574,13 @@ namespace PCMonitorClient
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in loginLink_Click: {ex.Message}");
+                Debug.WriteLine($"Error in NavigateToLogin: {ex.Message}");
                 MessageBox.Show($"Navigation error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
                 _isNavigating = false;
             }
-        }
-
-        private void langSelect_Click(object sender, RoutedEventArgs e)
-        {
-            if (langSelect.IsChecked == true)
-            {
-                SharedData.curCulture = "ms-MY";
-            }
-            else
-            {
-                SharedData.curCulture = "en";
-            }
-            SetCulture(SharedData.curCulture);
         }
 
         private void SetCulture(string cultureCode)
@@ -576,7 +596,6 @@ namespace PCMonitorClient
             textPassword.Clear();
             textIcNumber.Clear();
             textPhoneNumber.Clear();
-            textSiteCode.Clear();
             textFullName.Clear();
         }
 
@@ -597,5 +616,11 @@ namespace PCMonitorClient
             }
         }
     
+    }
+
+    public class UserActiveStatus
+    {
+        public bool Email { get; set; }
+        public bool PhoneNo { get; set; }
     }
 }
