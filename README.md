@@ -14,6 +14,7 @@ This client app communicates with the NADI server to send real-time PC metrics (
   - [Project Structure](#project-structure)
   - [Development Setup](#development-setup)
   - [Building for Release](#building-for-release)
+  - [Installing the Release Build (Windows 10/11)](#installing-the-release-build-windows-1011)
   - [Mac User Note](#mac-user-note)
   - [License](#license)
 
@@ -102,6 +103,10 @@ To create a deployable installer (`.msi` or `.exe`):
 4.  **Locate Installer**
     - The output will be in `PCMonitorClientSetup/Release/`.
     - You will find `PCMonitorClientSetup.msi` and `setup.exe`.
+
+## Installing the Release Build (Windows 10/11)
+
+See [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md) for the full step-by-step guide (with screenshot placeholders).
 
 ## Mac User Note
 
